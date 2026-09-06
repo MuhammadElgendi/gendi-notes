@@ -43,9 +43,10 @@ notes.example.com {
 	# ---- security headers ----------------------------------------------------
 	header {
 		# The pages load webfonts from Google Fonts and nothing else. This CSP
-		# permits exactly that and blocks everything not needed, including any
-		# script (the notes need no JavaScript at all).
-		Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; script-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+		# permits exactly that, plus the site's own small JS bundle (sidebar
+		# filter, theme toggle, TOC highlighting). No inline or third-party
+		# script is allowed.
+		Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'; frame-ancestors 'none'; base-uri 'none'"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "no-referrer"
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"

@@ -1,276 +1,257 @@
 # How to add a note
 
-The system exists so that you never have to make style decisions. Pick the
-template, fill it honestly, run the build. Visual consistency, indexing and
-link integrity are handled for you.
+The system exists so you never make style decisions. Copy the template, fill it
+honestly, run the build. Navigation, indexing, styling and link checking are
+handled for you.
 
 ---
 
 ## The five-minute version
 
 ```bash
-# 1. Copy the right template into the right directory, named after the slug
-cp templates/concept-template.md 03-kubernetes/scheduling/kubernetes-scheduling.md
+# 1. Copy a template into the right directory, named after the slug
+cp templates/guide-template.md 08-observability/prometheus/prometheus.md
 
 # 2. Write it. Fill the frontmatter first — the linter checks it.
 
 # 3. Build: renders the site, regenerates INDEX.md, fails on broken links
 node site/build.mjs
 
-# 4. Read it as a notebook page before you call it done
-node site/serve.mjs      # → http://localhost:8080
+# 4. Read it in the browser before calling it done
+node site/serve.mjs        # → http://localhost:8080
 ```
 
 ---
 
-## ① Choose the template
+## 1. The structure every note follows
 
-| Template | Use when the note answers… |
+This is the whole point of the collection. **A note that does not start with
+the basics does not belong here.**
+
+```markdown
+# Topic Name
+
+> One sentence. The insight, not a definition.
+
+## What is it?            ← plain language, 2–4 lines, no jargon
+## Why it exists          ← the problem that existed before it
+## What it is made of     ← the components, as a table. Which one am I touching?
+## How to use it          ← real commands, real files, real output
+## How it works underneath ← optional; only if it changes how you use it
+## What goes wrong        ← symptoms → cause → fix, as a table
+## Key takeaways          ← 5–7 bullets that stand alone
+```
+
+Sections may be dropped if you have nothing true and specific to say. The first
+four may **not** — they are the reason someone opens the note.
+
+| Section | Answers |
 |:---|:---|
-| `concept-template.md` | "What is X and why does it work that way?" |
-| `architecture-template.md` | "How do these components fit together?" |
-| `troubleshooting-template.md` | "I can see symptom X. What now?" |
-| `interview-template.md` | "How do I answer this out loud?" |
-| `cheat-sheet-template.md` | "Which command, right now?" |
-| `system-design-template.md` | "Design me a Y." |
-| `production-incident-template.md` | "What happened, and what do we change?" |
-
-If two seem to fit, you probably have two notes. Split them and link.
+| What is it? | "I have heard the name. What is it?" |
+| Why it exists | "Why would I use this instead of nothing?" |
+| What it is made of | "The docs mention five nouns. Which do I care about?" |
+| How to use it | "Show me. Actual commands." |
 
 ---
 
-## ② Choose the directory
+## 2. Choose the directory
 
-Three rules, in priority order:
-
-1. **A concept lives once**, in the domain that owns it. Kubernetes DNS lives in
-   `03-kubernetes/dns/`, not also in `08-observability/`. Everything else links
+1. **A concept lives once**, in the domain that owns it. Everything else links
    to it.
-2. **File by what it *is*, not by where you first met it.** You may have learned
-   about conntrack while debugging Kubernetes; conntrack is Linux networking.
-3. **Symptom-shaped notes go in `15-production/` or `*/troubleshooting/`.** Name
-   them by the symptom you can *observe*, never by the cause you have not
-   diagnosed yet — at 3am you search for what you can see.
+2. **File by what it *is*,** not where you met it. You met conntrack while
+   debugging Kubernetes; conntrack is Linux networking.
+3. **Symptom-shaped notes** go in `*/troubleshooting/` or `15-production/`, named
+   by what you can **observe** — at 3am you search for the symptom, not the
+   cause you have not found yet.
 
 ---
 
-## ③ Frontmatter
+## 3. Frontmatter
 
-Every note needs this block. The build **fails** without it.
+The build **fails** without this block.
 
 ```yaml
 ---
-title: Kubernetes Scheduling          # human title; becomes the page heading
-slug: kubernetes-scheduling           # MUST equal the filename without .md
-type: concept                         # see the table in ①
-domain: 03-kubernetes                 # the top-level directory
-tags: [kubernetes, scheduling]        # lowercase, for the #hashtag row
-level: 3                              # 1-5, see README
-status: seed                          # seed | draft | stable
-prerequisites: [kubernetes-networking] # slugs — checked, must resolve
-related: [kubernetes-services]        # slugs — checked, must resolve
-updated: 2026-09-05                   # YYYY-MM-DD
+title: Prometheus                    # human title, becomes the H1
+slug: prometheus                     # MUST equal the filename without .md
+type: guide                          # see below
+domain: 08-observability             # the top-level directory
+tags: [prometheus, metrics]          # shown as badges on the page
+keywords: [promql, scrape, alert]    # extra search terms for the sidebar filter
+level: 2                             # 1–5
+status: stable                       # seed | draft | stable
+prerequisites: [kubernetes-basics]   # slugs — checked, must resolve
+related: [grafana]                   # slugs — checked, must resolve
+updated: 2026-09-06                  # YYYY-MM-DD
 ---
 ```
 
-| Field | Enforced by the linter |
+**Types:** `guide` (a tool or technology — most notes), `concept`,
+`architecture`, `troubleshooting`, `interview`, `cheat-sheet`, `system-design`,
+`incident`, `runbook`.
+
+**`keywords`** matter: they feed the sidebar filter, so someone typing
+"coredns" finds the DNS note even though the title does not say it.
+
+| Enforced by the linter | |
 |:---|:---|
-| All seven required keys present | ✅ error if missing |
-| `slug` matches the filename | ✅ error if not |
-| `type` and `status` from the allowed set | ✅ error if unknown |
-| `level` between 1 and 5 | ✅ error if out of range |
-| `prerequisites` / `related` resolve to real notes | ✅ error if dangling |
-| No two notes share a slug | ✅ error on duplicate |
-
-**Status means:** `seed` = skeleton, not yet useful · `draft` = accurate but
-sections ⑦–⑪ incomplete · `stable` = you would rely on it in an incident.
+| All seven required keys | error if missing |
+| `slug` matches the filename | error if not |
+| `type` / `status` from the allowed set | error if unknown |
+| `level` between 1 and 5 | error if out of range |
+| `prerequisites` / `related` resolve | error if dangling |
+| No duplicate slugs | error |
 
 ---
 
-## ④ The one-line mental model
+## 4. The one-line summary
 
-The first blockquote after the H1 becomes the page subtitle **and** the INDEX
-entry. It is the most-read line you will write.
+The first blockquote after the H1 becomes the page subtitle, the meta
+description, the card on the home page **and** the INDEX entry. It is the
+most-read line you will write.
 
-```markdown
-# Kubernetes Scheduling
-
-> The scheduler does not place Pods — it scores nodes and lets kubelet do the placing.
-```
-
-Make it a claim, not a definition. Compare:
+Make it a claim, not a definition:
 
 | Weak | Strong |
 |:---|:---|
-| "The scheduler assigns Pods to nodes." | "The scheduler does not place Pods — it scores nodes and lets kubelet do the placing." |
-| "DNS resolves names to addresses." | "DNS is a globally distributed cache with no invalidation — which is why it is fast, and why it lies." |
+| "Docker is a containerisation platform." | "Docker packages an app with everything it needs, so the same package behaves identically on your laptop and in production." |
+| "A Service exposes pods." | "Pods get a new IP every restart, so nothing can talk to them directly. A Service is the address that stays put." |
 
-The build warns if it is missing. Do not repeat it in the body — the renderer
-lifts it out automatically.
-
----
-
-## ⑤ Writing the sections
-
-`## ① Title` opens a numbered section — the circled number is rendered as the
-blue circle automatically. Use `## ★ Key Takeaway` for the last one.
-
-Delete any section you cannot fill with something true and specific. Padding is
-worse than absence: it makes the reader distrust the sections that do have
-content.
-
-**Sections ⑦–⑪ (failure modes, troubleshooting, common mistakes, senior notes,
-interview traps) are what make a note worth keeping.** If you only have ①–⑥, set
-`status: draft` and come back.
+Do not repeat it in the body — the renderer lifts it out automatically.
 
 ---
 
-## ⑥ Diagrams
+## 5. Callouts
 
-Fence with `diagram` — this renders as a hand-drawn box in monospace:
-
-````markdown
-```diagram
-┌─────────────┐      ┌─────────────┐
-│   client    │ ───▶ │   service   │
-└─────────────┘      └─────────────┘
-```
-````
-
-**Rules:**
-
-- Understandable in **five seconds**. If it needs study, split it into two.
-- Box-drawing characters only: `┌ ┐ └ ┘ ─ │ ├ ┤ ┬ ┴ ┼` and arrows `→ ← ↑ ↓ ▶ ▼`.
-- **Label the arrows.** An unlabelled arrow says two things are related, which
-  the reader already assumed.
-- Show the *mechanism*, not the logo layout. A diagram that would be identical
-  for a competing product is not teaching anything.
-- Draw the **before/why** state as well as the after. Section ② of most concept
-  notes is a diagram of the problem.
-
-Do not add a monospace webfont for these. Box-drawing glyphs are missing from
-most webfonts, and the browser then substitutes them from a fallback with
-different metrics — every box visibly breaks apart. The CSS uses the local
-monospace stack deliberately.
-
----
-
-## ⑦ Callouts
+Five kinds. Two or three per note; a note that is half callouts has no
+hierarchy left.
 
 ```markdown
-:::mental     🧠  the analogy, and where it breaks down
-:::trap       ⚠️  where the obvious answer is wrong
-:::senior     🔥  the operational detail you only learn by running it
-:::failure    🚨  a real failure mode and its signature
-:::key        💡  a fact worth isolating mid-note
-:::interview  🎯  interview-specific guidance
-:::cloud          the closing takeaway — ONE per note
+:::tip      💡  a shortcut or a better way
+:::key      ✓   the single most important thing here
+:::warn     ⚠   a sharp edge that will bite you
+:::danger   🚨  a real failure people actually hit
+:::note     📘  extra depth, safely skippable
 :::
 ```
 
-Callouts are load-bearing, not decoration. Two or three per note. A note where
-half the content is in callouts has no hierarchy left.
-
-`:::cloud` appears **once**, at the end, under `## ★ Key Takeaway`.
-
----
-
-## ⑧ Cross-linking
+A custom title replaces the default label:
 
 ```markdown
-[[kubernetes-services]]              → linked, titled automatically
-[[kubernetes-services|Services]]     → linked with custom text
+:::danger Your data is deleted by default
+Anything a container writes goes to a temporary layer…
+:::
 ```
 
-Wikilinks are **checked**. A link to a non-existent slug fails the build, so the
-knowledge graph cannot silently rot.
-
-Link when the other note explains a *mechanism* you are relying on. Do not link
-the same target three times in one note — once, at the point of first reliance.
-
-Set `prerequisites` honestly: what would leave a reader lost if they had not read
-it? That field drives the "Needs first" chain at the bottom of the rendered page.
+Reserve `:::danger` for genuine production failures. Using it for mild advice
+trains the reader to skip them.
 
 ---
 
-## ⑨ Commands
+## 6. Code and diagrams
 
-Every command explains what it tells you. This is not a style preference — a
-command you cannot interpret is cargo cult, and it will fail you at 3am.
+Fence code with a language, and optionally a title bar:
 
 ````markdown
-```sh
-# An empty ENDPOINTS column means the selector matches nothing —
-# the single most common Service bug.
-kubectl get endpointslices -l kubernetes.io/service-name=my-svc
+```sh title="Build, then run"
+# Say WHY above the command and what matters in the output.
+docker build -t my-app:1.0 .
 ```
 ````
 
-Comment **above** the command with why you are running it and what in the output
-matters. Prose after it for what to conclude. Order commands by
-likelihood ÷ cost — cheapest and most likely first.
+Comment **above** the command with what it does and what to look for. A command
+you cannot interpret is cargo cult.
+
+Diagrams use the `diagram` fence:
+
+````markdown
+```diagram
+   Dockerfile        Image           Container
+   ──────────        ─────           ─────────
+   a recipe   build   a frozen  run   a running
+              ────→   snapshot  ────→ process
+```
+````
+
+:::danger Diagram character rules — these were learned the hard way
+**Use the arrows `→ ← ↑ ↓` (U+2190 block).**
+**Never use `▶ ▼ ◀ ▲` (U+25B6).** Those glyphs are missing from Consolas and
+Courier New, so the browser substitutes a wider one and every box drifts out of
+alignment. The U+2190 arrows are present in every common monospace font.
+
+Also avoid `╌` (dashed box-drawing) — missing from Courier New.
+
+And **do not add a monospace webfont** to `--font-diagram` in the CSS. Google
+Fonts subsets JetBrains Mono to Latin, dropping the U+2500 box-drawing block —
+measured at 7.8px for Latin vs 7.617px for box characters, which visibly breaks
+every diagram. Diagrams deliberately use the local monospace stack.
+:::
+
+Other diagram rules:
+
+- Understandable in **five seconds**. If it needs study, split it in two.
+- **Label the arrows.** An unlabelled arrow says two things are related, which
+  the reader already assumed.
+- Show the **mechanism**. A diagram that would look identical for a competing
+  product teaches nothing.
 
 ---
 
-## ⑩ Senior-level content
+## 7. Cross-linking
 
-Level 4+ notes must contain trade-offs. "Use X" is not senior content; "use X,
-which costs you Y, and here is when that becomes unacceptable" is.
+```markdown
+[[kubernetes-services]]              → linked, titled automatically
+[[kubernetes-services|Services]]     → custom link text
+```
 
-Concretely, a senior section should name at least one of:
+Wikilinks are **checked** — an unknown slug fails the build, so the graph cannot
+silently rot.
 
-- What this is **bad** at
-- What it costs operationally, not just in latency
-- The blast radius when it fails
-- What you would choose differently at 10× scale
-- The non-obvious detail from having actually run it
-
-The test: **could a competent engineer have written this from the official docs?**
-If yes, it is not senior content yet.
+Link where the other note explains a mechanism you rely on. Once, at the point
+of first reliance — not three times in one note.
 
 ---
 
-## ⑪ Interview questions
+## 8. Tables over prose
 
-Never a one-line answer. Every question gets the full block: short answer, why,
-deep answer, production example, common wrong answer, **why that answer is
-wrong**, senior follow-up, trick variant, model answer.
+Anything comparative belongs in a table. If a paragraph runs past three lines,
+it usually wants to be a table, a list, or a diagram.
 
-The most valuable field is **common wrong answer** — fill it from answers you
-have actually given or heard, not invented strawmen.
-
-Mark the level a question is asked at. A staff question put to a mid candidate is
-a bad question, not a hard one.
+Every table should answer **one** question, and the header should make that
+question obvious.
 
 ---
 
-## ⑫ Before you commit
+## 9. Before you commit
 
 ```bash
 node site/build.mjs --check
 ```
 
-Zero errors required. Then read it rendered — errors of *rhythm* (a wall of text,
-three callouts in a row, a diagram that needs study) are only visible on the page.
+Zero errors required. Then read it rendered — problems of *rhythm* (a wall of
+text, three callouts in a row, a diagram that needs study) are only visible on
+the page.
 
-**Quality bar:**
+**The bar:**
 
-> Would a senior engineer actually keep this note?
+> Would someone who already knows the basics find something here they did not
+> have?
 
-If it restates the official documentation, it fails. One excellent note beats ten
+If it restates the official documentation, it fails. One good note beats ten
 shallow ones, and shallow notes actively cost you — they dilute search and make
 the collection feel untrustworthy.
 
 ---
 
-## Extending the visual system
+## Extending the design system
 
-Do not style a note individually. If a note needs something the system lacks:
+Never style a note individually. If a note needs something the system lacks:
 
-1. Add the class to `site/assets/notebook.css`, in the right numbered section.
-2. Add a specimen to `site/styleguide.html` so it is documented and inspectable.
-3. If it needs Markdown syntax, add it to `renderBody()` in `site/build.mjs`.
-4. Document it in this file.
+1. Add the class to `site/assets/app.css`, in the right numbered section.
+2. If it needs Markdown syntax, extend `renderBody()` in `site/build.mjs`.
+3. If it needs markup, edit `site/shell.mjs`.
+4. Document it here.
 
-That order matters: a class not in the styleguide will be forgotten and
-reinvented inconsistently three notes later.
+The stylesheet is organised in numbered sections with the tokens at the top.
+Change a token, not a rule, when you want a different colour or spacing —
+that is what they are for.

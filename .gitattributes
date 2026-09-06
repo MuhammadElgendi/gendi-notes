@@ -12,5 +12,6 @@ deploy/post-receive text eol=lf
 *.md        text eol=lf
 *.css       text eol=lf
 *.mjs       text eol=lf
+*.js        text eol=lf
 *.html      text eol=lf
 Caddyfile   text eol=lf

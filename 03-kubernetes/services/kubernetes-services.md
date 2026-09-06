@@ -1,260 +1,238 @@
 ---
 title: Kubernetes Services
 slug: kubernetes-services
-type: concept
+type: guide
 domain: 03-kubernetes
-tags: [kubernetes, services, kube-proxy, endpoints]
-level: 3
+tags: [kubernetes, services, networking]
+keywords: [clusterip, nodeport, loadbalancer, ingress, endpoints, selector, dns, port, targetport]
+level: 2
 status: stable
-prerequisites: [kubernetes-networking]
-related: [kubernetes-dns, kubernetes-networking-questions]
-updated: 2026-09-05
+prerequisites: [kubernetes-basics]
+related: [kubernetes-deployments, dns, kubernetes-troubleshooting]
+updated: 2026-09-06
 ---
 
 # Kubernetes Services
 
-> A Service is a stable name for an unstable set of Pods — and the set is defined by labels, not by intent.
+> Pods get a new IP address every time they restart, so nothing can talk to them directly. A Service is the stable address that stays put.
 
-## ① What is it?
+## What is it?
 
-A Service gives a group of Pods one **stable virtual IP** and DNS name. Pods
-come and go with new IPs on every restart; the Service address never changes.
-
-Two independent things happen under that one object:
-
-- The **EndpointSlice controller** watches for Pods matching the selector *and
-  passing their readiness probe*, and maintains the backend list.
-- **kube-proxy** turns that list into kernel rules that rewrite the virtual IP
-  to a real Pod IP.
-
-Most Service bugs are in the first half while people debug the second.
-
-## ② Why does it exist?
+A Service gives a group of pods one **fixed IP address and DNS name**. Clients
+talk to the Service; it forwards to whichever pods are currently healthy.
 
 ```diagram
-  WITHOUT a Service              WITH a Service
-  client ──▶ 10.2.1.3 ✗ gone    client ──▶ my-svc (10.96.0.10)
-         ──▶ 10.2.1.9 ✗ gone                    │
-         ──▶ 10.2.2.4 ✓ ...for now              ├──▶ 10.2.1.3
-                                                ├──▶ 10.2.1.4
-  Who tracks the current list?                  └──▶ 10.2.2.6
-  Every client, forever.              Kubernetes tracks it. Once.
+   without a Service              with a Service
+   ─────────────────              ──────────────
+   client → 10.1.0.4  ✗ gone      client → web (10.96.0.10)
+          → 10.1.0.9  ✗ gone                    │
+          → 10.1.2.3  ✓ for now                 ├→ 10.1.0.4
+                                                ├→ 10.1.0.5
+   who tracks the current list?                 └→ 10.1.2.6
+   every client, forever.             Kubernetes tracks it. Once.
 ```
 
-## ③ Mental Model
+## Why it exists
 
-:::mental
-A Service is a **hotel reception desk**. Guests change rooms constantly; you
-always ask reception, and reception always knows the current room.
+Pod IPs are **ephemeral by design**. A pod that restarts, moves node, or scales
+gets a different address. Hard-coding one guarantees breakage.
 
-**Where it breaks down:** reception does not walk you to the room. Once you have
-the address the connection is direct Pod-to-Pod — the Service is not in the data
-path. This is why "the Service is slow" is never a meaningful statement.
-:::
+A Service solves two problems at once: a stable address, and load balancing
+across whatever pods exist right now.
 
-## ④ The Types
+## What it is made of
+
+Two things happen behind one object — and nearly all Service bugs are in the
+first while people debug the second:
+
+```diagram
+   ① the ENDPOINT list          ② the ROUTING rules
+   ─────────────────────        ───────────────────
+   "which pods match my         "rewrite traffic for
+    selector AND pass           10.96.0.10 to one of
+    their readiness probe?"      those pod IPs"
+
+   maintained by the            programmed into each node's
+   endpoints controller         kernel by kube-proxy
+```
+
+### The four types
 
 | Type | Gives you | Reachable from | Use when |
 |:---|:---|:---|:---|
-| `ClusterIP` (default) | Virtual IP inside the cluster | Inside only | Service-to-service |
-| `NodePort` | A port on **every** node | Outside, if you can reach nodes | Rarely directly; it is a building block |
-| `LoadBalancer` | Cloud LB → NodePort → Pods | Internet | Cloud-managed external entry |
-| `ExternalName` | A `CNAME` — no proxying at all | Inside | Aliasing an external hostname |
-| **Headless** (`clusterIP: None`) | DNS returns **Pod IPs directly** | Inside | StatefulSets, client-side LB, per-Pod addressing |
+| **ClusterIP** (default) | Internal IP + DNS name | Inside the cluster only | Service-to-service. Most of the time |
+| **NodePort** | A port on every node | Outside, if you can reach nodes | Rarely direct — it is a building block |
+| **LoadBalancer** | A cloud load balancer | The internet | Cloud-managed external entry |
+| **ExternalName** | A DNS CNAME, no proxying | Inside | Aliasing an external hostname |
 
-:::senior
-**`LoadBalancer` is a superset, not an alternative.** A `LoadBalancer` Service
-allocates a `NodePort`, which allocates a `ClusterIP`. All three exist
-simultaneously. Understanding this explains why external traffic still passes
-through kube-proxy's rules, and why `externalTrafficPolicy` affects a cloud LB
-at all.
-
-**Headless is the odd one out** — it is the only type with no virtual IP and no
-kube-proxy involvement. DNS returns every Pod IP and the client chooses. This is
-what StatefulSets use to give each Pod a stable, individually addressable name.
+:::note LoadBalancer is a superset, not an alternative
+A `LoadBalancer` Service creates a `NodePort`, which creates a `ClusterIP`. All
+three exist at once. This is why external traffic still goes through the same
+in-cluster routing rules, and why the cloud LB's health checks matter.
 :::
 
-## ⑤ How a request actually flows
+## How to use it
 
-```diagram
- client Pod
-    │  ① resolve "my-svc" ──▶ CoreDNS ──▶ 10.96.0.10  (the ClusterIP)
-    ▼
- connect to 10.96.0.10:80
-    │  ② kernel netfilter: KUBE-SERVICES chain matches the VIP
-    │  ③ DNAT to a randomly chosen ready endpoint  ──▶ 10.2.1.4:8080
-    │  ④ conntrack records the choice, so the whole
-    │     connection stays pinned to that one Pod
-    ▼
- packet leaves with dst=10.2.1.4, src=<real client Pod IP>
-    │  ⑤ CNI routes it — the Service is no longer involved
-    ▼
- backend Pod
+```yaml title="service.yaml"
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  type: ClusterIP
+  selector:
+    app: web          # MUST match the pods' labels exactly
+  ports:
+    - port: 80        # the port the Service listens on
+      targetPort: 8080  # the port the CONTAINER listens on
 ```
 
-Two consequences worth internalising:
+:::warn `port` vs `targetPort` — swapped constantly
+- **`port`** is what clients connect to on the Service.
+- **`targetPort`** is the port inside the container.
 
-- **Balancing is per-connection, not per-request.** With HTTP keep-alive or
-  gRPC, one long-lived connection pins to one Pod. Scaling from 3 to 30 Pods
-  moves no existing traffic. This is the single most common reason "autoscaling
-  did not help".
-- **The ClusterIP is not pingable.** It exists only as DNAT rules. `ping`
-  failing against a healthy Service means nothing.
-
-## ⑥ Readiness is what actually controls routing
-
-The selector decides *candidacy*. The **readiness probe** decides *membership*.
-
-```diagram
-Pod matches selector? ──no──▶ never an endpoint
-        │ yes
-        ▼
-Readiness probe passing? ──no──▶ removed from EndpointSlice, no traffic
-        │ yes
-        ▼
-    receives traffic
-```
-
-This is the useful lever: failing readiness takes a Pod out of rotation
-*without* restarting it — unlike a liveness probe, which kills it.
-
-## ⑦ Failure Modes
-
-| What breaks | Signature | Check |
-|:---|:---|:---|
-| Selector typo | DNS resolves, connections time out | `kubectl get endpointslices` — empty |
-| `targetPort` wrong | Connection refused | Compare Service `targetPort` to the container port |
-| Readiness never passes | Endpoints empty, Pods `Running` | `kubectl describe pod` → probe failures |
-| Keep-alive pinning | Load skewed after scale-up | Per-Pod request-rate metrics diverge |
-| Deregistration race | 502s during every rolling deploy | See below |
-
-:::failure
-**The deregistration race — why every rolling deploy emits a few 502s.**
-
-When a Pod is deleted, two things happen **in parallel, not in order**:
-
-```diagram
-   Pod marked for deletion
-        │
-        ├──▶ kubelet sends SIGTERM ────────────▶ app starts shutting down
-        │
-        └──▶ EndpointSlice updated ──▶ kube-proxy on EVERY node
-                                        rewrites its rules ── takes time
-```
-
-There is no coordination between the two. The application can finish shutting
-down **before** the last node has removed it from its rules — so traffic keeps
-arriving at a socket that is already closed.
-
-The fix is not a longer `terminationGracePeriodSeconds`. It is a `preStop` hook
-that sleeps, delaying SIGTERM long enough for endpoint propagation to win the
-race:
-
-```yaml
-lifecycle:
-  preStop:
-    exec:
-      # Do nothing for 5-10s. The Pod is already out of the EndpointSlice;
-      # this window lets every node's kube-proxy catch up before the app dies.
-      command: ["sh", "-c", "sleep 10"]
-```
-
-Combine with graceful shutdown in the application (stop accepting, drain
-in-flight, then exit). Neither alone is sufficient.
+They are often the same, which is why the distinction is easy to miss — and then
+one day they differ and you get "connection refused" from a perfectly healthy
+pod.
 :::
 
-## ⑧ Troubleshooting
+### DNS names
+
+Once a Service exists, it has a name:
+
+```diagram
+   web  .  production  .  svc  .  cluster.local
+    │          │           │          │
+    │          │           │          └─ cluster domain
+    │          │           └─ "svc" for Services
+    │          └─ namespace
+    └─ Service name
+```
+
+| From | You can write |
+|:---|:---|
+| Same namespace | `web` |
+| Another namespace | `web.production` |
+| Anywhere (fully qualified) | `web.production.svc.cluster.local` |
+
+So an app connects to `postgres://db:5432` where `db` is just the Service name.
+You never handle IP addresses.
+
+### Commands
 
 ```sh
-# 1. THE FIRST COMMAND. Empty endpoints explains almost every Service bug.
-kubectl get endpointslices -l kubernetes.io/service-name=my-svc -o wide
+kubectl get svc                      # all Services with their ClusterIPs
+kubectl get endpoints web            # THE FIRST DEBUGGING COMMAND
+kubectl describe svc web
 
-# 2. If empty: do the labels actually match? Compare these two outputs
-#    character by character — "app=api" vs "app: api" trips people constantly.
-kubectl get svc my-svc -o jsonpath='{.spec.selector}{"\n"}'
-kubectl get pods --show-labels
+# Test from inside the cluster — a Service is not reachable from your laptop
+kubectl run tmp --rm -it --image=busybox --restart=Never -- sh
+#   inside: wget -qO- http://web
+#   inside: nslookup web
 
-# 3. Endpoints exist but connections fail — is targetPort right?
-#    Service port is what clients use; targetPort is the container's port.
-kubectl get svc my-svc -o jsonpath='{.spec.ports[*]}{"\n"}'
-
-# 4. Bypass the Service to isolate the layer. If this works, the Pod is fine
-#    and the problem is Service/DNS.
-kubectl run tmp --rm -it --image=nicolaka/netshoot --restart=Never -- \
-  curl -sS --max-time 3 http://10.2.1.4:8080/healthz
+# Or reach it from your machine temporarily
+kubectl port-forward svc/web 8080:80    # then open http://localhost:8080
 ```
 
-## ⑨ Common Mistakes
+`kubectl port-forward` is how you test an internal Service from your laptop
+without exposing it to the internet.
 
-- **Pinging a ClusterIP** to test a Service. It cannot work, and it tells you
-  nothing about health.
-- **Confusing `port` and `targetPort`.** `port` is the Service's; `targetPort`
-  is the container's. Swapping them yields connection refused.
-- **Expecting Service load balancing to rebalance existing connections.** It
-  balances connections, not requests. Long-lived connections never move.
-- **Using a liveness probe where readiness was meant.** A failing liveness probe
-  restarts the Pod; a failing readiness probe just removes it from rotation.
-  Under load, an aggressive liveness probe turns a slowdown into a restart loop.
+## What goes wrong
 
-## ⑩ Senior Engineer Notes
+:::danger `ENDPOINTS: <none>` — the most common Kubernetes bug by a wide margin
+The Service exists, DNS resolves, connections are accepted — and everything
+times out. Because the Service has **no backends**.
 
-**Client-side load balancing exists because of the keep-alive problem.** gRPC
-and HTTP/2 multiplex many requests over one connection, so per-connection DNAT
-gives terrible distribution. The answers are a headless Service with a
-client-side balancer, or a service mesh sidecar that balances per request. If an
-interviewer asks how to load-balance gRPC in Kubernetes, "use a Service" is the
-wrong answer.
+```sh
+kubectl get endpoints web
+# web    <none>    5m      ← this
+```
 
-**A Service without a selector is a legitimate and underused pattern.** Omit the
-selector and write the EndpointSlice yourself, and you get a stable in-cluster
-name for something outside the cluster — a managed database, a legacy VM. Your
-application config then never has to know whether the backend was migrated in.
+Two possible causes:
 
-**`sessionAffinity: ClientIP` is coarse.** It pins on source IP, so every client
-behind one NAT gateway lands on the same Pod. It is a blunt instrument; real
-session handling belongs in the application or at an L7 proxy.
+**1. The selector does not match the pods' labels.** Compare them character by
+character:
 
-## ⑪ Interview Traps
+```sh
+kubectl get svc web -o jsonpath='{.spec.selector}{"\n"}'
+kubectl get pods --show-labels
+```
 
-:::trap
-**"You scaled from 3 replicas to 30 and latency did not improve. Why?"**
+**2. The pods are not Ready.** Only pods passing their readiness probe are
+listed. `kubectl get pods` showing `0/1 READY` means the probe is failing — the
+Service is behaving correctly by refusing to send traffic there.
 
-The expected wrong answer is about resource limits or the HPA.
-
-The mechanism: existing clients hold **keep-alive connections**, and kube-proxy
-balances per connection. Those connections stay pinned to the original 3 Pods.
-The 27 new Pods are ready, healthy, in the EndpointSlice — and idle.
-
-Evidence: per-Pod request rate is wildly skewed while the Service looks
-perfectly healthy. Fixes: connection max-lifetime on the client, client-side
-balancing over a headless Service, or an L7 proxy that balances per request.
+There is no error message for either. Always check endpoints first.
 :::
 
-:::trap
-**"Why does a rolling deploy cause 502s when the app shuts down gracefully?"**
+| Symptom | Cause | Fix |
+|:---|:---|:---|
+| `ENDPOINTS: <none>` | Selector mismatch, or pods not Ready | See above |
+| Connection refused | `targetPort` wrong | Compare to the container's real port |
+| `ping <ClusterIP>` fails | A ClusterIP is not pingable — it is a routing rule, not a host | Use `wget`/`curl`, not `ping` |
+| Works from one pod, not another | NetworkPolicy blocking it | `kubectl get networkpolicy -A` |
+| `LoadBalancer` stuck on `<pending>` | No cloud integration (e.g. plain minikube) | Use `port-forward` or NodePort locally |
+| Scaled up, load still uneven | Keep-alive connections pinned to old pods | See below |
 
-Because graceful shutdown solves the *wrong half*. The app draining cleanly does
-not help if kube-proxy on some node still routes new connections to it. The race
-is between endpoint propagation and process death — see ⑦. A candidate who
-reaches for `terminationGracePeriodSeconds` has misdiagnosed which side is slow.
+:::warn Scaling up did not spread the load
+Kubernetes balances **connections**, not requests. With HTTP keep-alive or gRPC,
+one long-lived connection stays pinned to one pod for its whole life.
+
+So scaling from 3 to 30 pods moves **no existing traffic**. The 27 new pods are
+Ready, in the endpoint list, and idle.
+
+The tell: per-pod request rates are wildly uneven while the Service looks
+perfectly healthy. Fixes are a maximum connection lifetime on the client, or an
+L7 proxy / service mesh that balances per request.
 :::
 
-## ★ Key Takeaway
+## Getting traffic in from outside
 
-:::cloud
-**1.** Selector decides candidacy; **readiness decides membership**.
-**2.** `kubectl get endpointslices` first, always. Empty endpoints explains most
-Service bugs in one command.
-**3.** Balancing is per **connection**. Keep-alive defeats it.
-**4.** Rolling-deploy 502s come from the endpoint-propagation race — fix with a
-`preStop` sleep, not a longer grace period.
-**5.** The Service is not in the data path. "The Service is slow" is never a
-diagnosis.
-:::
+A `ClusterIP` Service is internal. For HTTP from the internet you normally want
+an **Ingress** in front of it — one load balancer for many services, with
+hostname and path routing and TLS.
 
----
+```diagram
+   internet
+      │
+      ▼
+   Ingress          example.com/api  → api Service
+      │             example.com/     → web Service
+      ├──→ Service (api) ──→ pods
+      └──→ Service (web) ──→ pods
+```
 
-**Version note:** EndpointSlices are the scalable backing store and have been GA
-since 1.21; `kubectl get endpoints` still works but is the legacy view.
-`trafficDistribution` (topology-aware routing) is newer and cloud-dependent —
-verify behaviour on your platform before relying on it. Verified against 1.29–1.31.
+```yaml title="ingress.yaml"
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: site
+spec:
+  ingressClassName: nginx      # which controller handles this
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port: { number: 80 }
+```
+
+An Ingress object does nothing on its own — a **controller** (ingress-nginx,
+Traefik) must be installed in the cluster to act on it. An Ingress that appears
+to be ignored usually means no controller, or the wrong `ingressClassName`.
+
+## Key takeaways
+
+- Pod IPs change; a Service is the **stable address**.
+- **`kubectl get endpoints <svc>` first, always.** `<none>` means selector
+  mismatch or pods not Ready.
+- **`port`** is the Service's, **`targetPort`** is the container's.
+- A ClusterIP is **not pingable** — that failing proves nothing.
+- Services are reachable **from inside the cluster**; use `port-forward` from
+  your laptop.
+- Load balancing is **per connection**. Keep-alive defeats it.
+- **Ingress** for HTTP from outside — and it needs a controller installed.

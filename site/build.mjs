@@ -6,18 +6,19 @@
  *   node site/build.mjs --check   lint only, no writes (exit 1 on error)
  *   node site/build.mjs --quiet   build, print only warnings/errors
  *
- * Zero dependencies. Node 18+. No npm install, works offline.
+ * Zero dependencies. Node 18+. Works offline.
  *
  * WHY THIS EXISTS
- *   The index must never lie. Hand-maintained indexes rot within a month.
- *   Here INDEX.md is *generated* from the notes themselves, and the linter
- *   fails the build on a broken cross-link. Add a note -> rebuild -> the
- *   index, the knowledge graph and the visual style all update themselves.
+ *   The index must never lie. Hand-maintained indexes rot within a month, so
+ *   INDEX.md is generated from the notes' own frontmatter, and the linter
+ *   fails the build on a broken cross-reference. Add a note -> rebuild -> the
+ *   index, the navigation and the styling all update themselves.
  * ========================================================================== */
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { notePage, homePage, DOMAIN_NAMES } from "./shell.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -27,22 +28,20 @@ const ARGV = new Set(process.argv.slice(2));
 const CHECK_ONLY = ARGV.has("--check");
 const QUIET = ARGV.has("--quiet");
 
-/* Root-level documents are prose, not notes: no frontmatter is required. */
 const ROOT_DOCS = ["README.md", "INDEX.md", "ROADMAP.md", "GLOSSARY.md",
                    "PRINCIPLES.md", "CONTRIBUTING.md"];
 const SKIP_DIRS = new Set(["site", "node_modules", ".git", ".github", "templates"]);
 
-const VALID_TYPES  = ["concept", "architecture", "troubleshooting", "interview",
-                      "cheat-sheet", "system-design", "incident", "runbook"];
+const VALID_TYPES = ["concept", "guide", "architecture", "troubleshooting", "interview",
+                     "cheat-sheet", "system-design", "incident", "runbook"];
 const VALID_STATUS = ["seed", "draft", "stable"];
 
 const problems = [];
 const err  = (f, m) => problems.push({ sev: "ERROR", file: f, msg: m });
 const warn = (f, m) => problems.push({ sev: "WARN",  file: f, msg: m });
 
-/* ------------------------------------------------------------ 1. FRONTMATTER */
-/* A deliberately small YAML subset: scalars, [inline, lists], and - bullets.
-   Enough for note metadata; refuses to guess at anything more exotic. */
+/* --------------------------------------------------------- 1. FRONTMATTER */
+/* A deliberately small YAML subset: scalars, [inline, lists], and - bullets. */
 function parseFrontmatter(raw, file) {
   if (!raw.startsWith("---")) return { data: null, body: raw };
   const end = raw.indexOf("\n---", 3);
@@ -59,44 +58,39 @@ function parseFrontmatter(raw, file) {
     if (!kv) { warn(file, `unparsed frontmatter line: ${line.trim()}`); continue; }
     key = kv[1];
     const val = kv[2].trim();
-    if (val === "") { data[key] = []; }
+    if (val === "") data[key] = [];
     else if (val.startsWith("[")) {
-      data[key] = val.replace(/^\[|\]$/g, "").split(",")
-                     .map(s => unquote(s.trim())).filter(Boolean);
+      data[key] = val.replace(/^\[|\]$/g, "").split(",").map(s => unquote(s.trim())).filter(Boolean);
     } else data[key] = unquote(val);
   }
   return { data, body };
 }
 const unquote = s => s.replace(/^["']|["']$/g, "");
 
-/* ------------------------------------------------------------- 2. INLINE MD */
+/* ----------------------------------------------------------- 2. INLINE MD */
 const escapeHtml = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;")
                          .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-/* Circled section numbers, as used by every template. */
-const CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮";
-
 function inline(text, ctx) {
-  const stash = [];
-  /* Rendered fragments park behind a NUL sentinel so later regexes can never
+  /* Rendered fragments park behind a NUL sentinel so later regexes cannot
      chew through them. A plain " 0 " marker would collide with any digit in
      the prose ("level 3 note" -> stash[3]). */
+  const stash = [];
   const keep = html => `\u0000${stash.push(html) - 1}\u0000`;
 
   let s = text;
-  /* code spans first: their contents must survive untouched */
   s = s.replace(/`([^`]+)`/g, (_, c) => keep(`<code>${escapeHtml(c)}</code>`));
   s = escapeHtml(s);
 
-  /* [[wikilink]] and [[wikilink|label]] -> resolved cross-reference */
+  /* [[slug]] and [[slug|label]] — checked cross-references */
   s = s.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, slug, label) => {
     const target = ctx.slugs.get(slug.trim());
-    const text = (label || (target ? target.title : slug)).trim();
-    if (!target) { err(ctx.name, `wikilink to unknown slug: [[${slug.trim()}]]`); return `<span class="hl-red">${text}?</span>`; }
-    return keep(`<a href="${ctx.rel(target.out)}">${escapeHtml(text)}</a>`);
+    const txt = (label || (target ? target.title : slug)).trim();
+    if (!target) { err(ctx.name, `wikilink to unknown slug: [[${slug.trim()}]]`); return escapeHtml(txt); }
+    return keep(`<a href="${ctx.up + target.out}">${escapeHtml(txt)}</a>`);
   });
 
-  /* [text](target) — .md targets are rewritten to .html and link-checked */
+  /* [text](target) — .md targets rewritten to .html and existence-checked */
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, href) => {
     let out = href;
     if (!/^(https?:|mailto:|#)/.test(href)) {
@@ -104,74 +98,82 @@ function inline(text, ctx) {
       if (href.endsWith(".md") && !fs.existsSync(abs)) err(ctx.name, `broken link: ${href}`);
       out = href.replace(/\.md(#|$)/, ".html$1");
     }
-    return keep(`<a href="${out}">${label}</a>`);
+    const ext = /^https?:/.test(out) ? ' target="_blank" rel="noopener"' : "";
+    return keep(`<a href="${out}"${ext}>${label}</a>`);
   });
 
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
-  s = s.replace(/==([^=]+)==/g, '<span class="hl-red">$1</span>');
   s = s.replace(/~~([^~]+)~~/g, "<del>$1</del>");
 
   return s.replace(/\u0000(\d+)\u0000/g, (_, i) => stash[+i]);
 }
 
-/* --------------------------------------------------------------- 3. BLOCKS */
+/* -------------------------------------------------------------- 3. BLOCKS */
 const CALLOUTS = {
-  key:       { cls: "is-key",       icon: "\u{1F4A1}", label: "Key Takeaway" },
-  mental:    { cls: "is-mental",    icon: "\u{1F9E0}", label: "Mental Model" },
-  trap:      { cls: "is-trap",      icon: "⚠️", label: "Trap" },
-  senior:    { cls: "is-senior",    icon: "\u{1F525}", label: "Senior Tip" },
-  failure:   { cls: "is-failure",   icon: "\u{1F6A8}", label: "Production Failure" },
-  interview: { cls: "is-interview", icon: "\u{1F3AF}", label: "Interview Tip" },
-  cloud:     { cls: "cloud",        icon: "",          label: "" },
+  tip:    { cls: "is-tip",    icon: "\u{1F4A1}", label: "Tip" },
+  key:    { cls: "is-key",    icon: "✓",    label: "Key point" },
+  warn:   { cls: "is-warn",   icon: "⚠",    label: "Watch out" },
+  danger: { cls: "is-danger", icon: "\u{1F6A8}", label: "Common failure" },
+  note:   { cls: "is-note",   icon: "\u{1F4D8}", label: "Going deeper" },
 };
 
-function renderBody(md, ctx) {
+const slugify = s => s.toLowerCase().trim()
+  .replace(/[`*_~\[\]()]/g, "")
+  .replace(/[^a-z0-9]+/g, "-")
+  .replace(/^-+|-+$/g, "") || "section";
+
+function renderBody(md, ctx, toc) {
   const lines = md.split("\n");
   const out = [];
   let i = 0;
-  let sectionOpen = false;
-  const closeSection = () => { if (sectionOpen) { out.push("</section>"); sectionOpen = false; } };
 
   while (i < lines.length) {
     const line = lines[i];
 
-    /* --- fenced blocks: ```diagram is a drawn figure, ```sh is a command --- */
-    const fence = line.match(/^```(\w*)/);
+    /* fenced blocks. ```diagram is box art; ```sh title="…" is a command. */
+    const fence = line.match(/^```(\S*)\s*(?:title="([^"]*)")?/);
     if (fence) {
       const lang = fence[1];
+      const title = fence[2];
       const buf = [];
       i++;
       while (i < lines.length && !lines[i].startsWith("```")) buf.push(lines[i++]);
       i++;
       const code = escapeHtml(buf.join("\n"));
-      out.push(lang === "diagram"
-        ? `<div class="diagram">${code}</div>`
-        : `<pre><code class="lang-${lang || "text"}">${code}</code></pre>`);
+      if (lang === "diagram") { out.push(`<div class="diagram">${code}</div>`); continue; }
+      out.push(
+        `<div class="code-block">` +
+        (title ? `<div class="code-label">${escapeHtml(title)}</div>` : "") +
+        `<pre><code class="lang-${lang || "text"}">${code}</code></pre></div>`
+      );
       continue;
     }
 
-    /* --- ::: callout containers --- */
+    /* ::: callouts */
     const dir = line.match(/^:::\s*(\w+)\s*(.*)$/);
     if (dir && CALLOUTS[dir[1]]) {
       const spec = CALLOUTS[dir[1]];
       const custom = dir[2].trim();
       const buf = [];
       i++;
-      while (i < lines.length && !lines[i].startsWith(":::")) buf.push(lines[i++]);
+      let depth = 1;
+      while (i < lines.length) {
+        if (/^:::\s*\w+/.test(lines[i])) depth++;
+        else if (/^:::\s*$/.test(lines[i])) { depth--; if (!depth) break; }
+        buf.push(lines[i++]);
+      }
       i++;
-      const inner = renderBody(buf.join("\n"), ctx);
-      if (dir[1] === "cloud") { out.push(`<div class="cloud">${inner}</div>`); continue; }
       out.push(
         `<aside class="callout ${spec.cls}">` +
         `<span class="callout-icon" aria-hidden="true">${spec.icon}</span>` +
         `<span class="callout-label">${escapeHtml(custom || spec.label)}</span>` +
-        `${inner}</aside>`
+        `<div class="callout-body">${renderBody(buf.join("\n"), ctx, null)}</div></aside>`
       );
       continue;
     }
 
-    /* --- tables --- */
+    /* tables */
     if (/^\|/.test(line) && /^\|[\s:|-]+\|$/.test(lines[i + 1] || "")) {
       const cells = r => r.split("|").slice(1, -1).map(c => inline(c.trim(), ctx));
       const head = cells(line);
@@ -185,38 +187,30 @@ function renderBody(md, ctx) {
       continue;
     }
 
-    /* --- headings. "## (1) Title" opens a numbered .section --- */
+    /* headings — H2/H3 get an id and land in the on-page TOC */
     const h = line.match(/^(#{1,4})\s+(.*)$/);
     if (h) {
       const depth = h[1].length;
-      let text = h[2].trim();
-      if (depth === 1) { i++; continue; }          // H1 becomes .note-title in the shell
-      if (depth === 2) {
-        closeSection();
-        const num = CIRCLED.includes(text[0]) ? text[0] : (text[0] === "★" ? "★" : null);
-        if (num) text = text.slice(1).trim();
-        out.push('<section class="section">');
-        sectionOpen = true;
-        out.push(
-          `<h2 class="section-title">` +
-          (num ? `<span class="section-number" aria-hidden="true">${num}</span>` : "") +
-          `<span class="st-text">${inline(text, ctx)}</span></h2>`
-        );
-        i++; continue;
-      }
-      out.push(`<h${depth}>${inline(text, ctx)}</h${depth}>`);
+      const text = h[2].trim();
+      if (depth === 1) { i++; continue; }            // H1 is rendered by the shell
+      const id = slugify(text);
+      if (toc && depth <= 3) toc.push({ level: depth, id, text: text.replace(/[`*]/g, "") });
+      const anchor = depth <= 3 ? `<a class="anchor" href="#${id}" aria-label="Link to this section">#</a>` : "";
+      out.push(`<h${depth} id="${id}">${inline(text, ctx)}${anchor}</h${depth}>`);
       i++; continue;
     }
 
-    /* --- blockquote --- */
+    /* blockquote */
     if (line.startsWith("> ")) {
       const buf = [];
       while (i < lines.length && lines[i].startsWith(">")) buf.push(lines[i++].replace(/^>\s?/, ""));
-      out.push(`<blockquote class="hand-box is-dashed">${renderBody(buf.join("\n"), ctx)}</blockquote>`);
+      out.push(`<blockquote class="callout is-note"><span class="callout-icon" aria-hidden="true">&ldquo;</span>` +
+               `<span class="callout-label">Note</span>` +
+               `<div class="callout-body">${renderBody(buf.join("\n"), ctx, null)}</div></blockquote>`);
       continue;
     }
 
-    /* --- lists (checklist "- [x]" gets the green tick) --- */
+    /* lists */
     if (/^\s*([-*]|\d+\.)\s+/.test(line)) {
       const ordered = /^\s*\d+\./.test(line);
       const items = [];
@@ -225,7 +219,6 @@ function renderBody(md, ctx) {
         let t = lines[i].replace(/^\s*([-*]|\d+\.)\s+/, "");
         if (/^\[[ xX]\]\s*/.test(t)) { checklist = true; t = t.replace(/^\[[ xX]\]\s*/, ""); }
         i++;
-        /* lazy continuation lines belong to the current item */
         while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !/^\s*([-*]|\d+\.)\s+/.test(lines[i]))
           t += " " + lines[i++].trim();
         items.push(`<li>${inline(t, ctx)}</li>`);
@@ -235,61 +228,21 @@ function renderBody(md, ctx) {
       continue;
     }
 
-    /* --- layout helpers written as raw HTML comments in the markdown --- */
-    if (line.trim() === "<!-- grid -->")     { out.push('<div class="grid-2 is-divided">'); i++; continue; }
-    if (line.trim() === "<!-- /grid -->")    { out.push("</div>"); i++; continue; }
-    if (line.trim() === "<!-- col -->")      { out.push("<div>"); i++; continue; }
-    if (line.trim() === "<!-- /col -->")     { out.push("</div>"); i++; continue; }
-
     if (line.trim() === "---") { out.push("<hr>"); i++; continue; }
     if (!line.trim()) { i++; continue; }
 
-    /* --- paragraph --- */
+    /* paragraph */
     const buf = [];
-    while (i < lines.length && lines[i].trim() && !/^(#{1,4}\s|```|>|\s*[-*]\s|\s*\d+\.\s|\||:::|---$|<!-- )/.test(lines[i]))
+    while (i < lines.length && lines[i].trim() &&
+           !/^(#{1,4}\s|```|>|\s*[-*]\s|\s*\d+\.\s|\||:::|---$)/.test(lines[i]))
       buf.push(lines[i++]);
     if (buf.length) out.push(`<p>${inline(buf.join(" "), ctx)}</p>`);
     else i++;
   }
-  closeSection();
   return out.join("\n");
 }
 
-/* ----------------------------------------------------------- 4. PAGE SHELL */
-const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com">' +
-  '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
-  '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?' +
-  'family=Caveat:wght@600;700&family=Patrick+Hand&display=swap">';
-
-function shell({ title, subtitle, tags, date, bodyHtml, cssPath, footer, homePath }) {
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)} — Gendi Notes</title>
-${FONTS}
-<link rel="stylesheet" href="${cssPath}">
-</head>
-<body>
-<a class="skip-link" href="#main">Skip to content</a>
-<main class="note-page" id="main">
-  <div class="note-meta">
-    <span class="note-tags">${tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join(" ")}</span>
-    <span class="note-date">${escapeHtml(date)}</span>
-  </div>
-  <h1 class="note-title">${escapeHtml(title)} <span class="star" aria-hidden="true">☆</span></h1>
-  <span class="title-underline" aria-hidden="true"></span>
-  ${subtitle ? `<p class="note-subtitle">${inline(subtitle, { file: title, slugs: new Map(), rel: x => x })}</p>` : ""}
-  ${bodyHtml}
-  ${footer}
-  <p class="no-print" style="margin-top:1.5rem"><a href="${homePath}">← back to the index</a></p>
-</main>
-</body>
-</html>`;
-}
-
-/* ------------------------------------------------------------ 5. DISCOVERY */
+/* ----------------------------------------------------------- 4. DISCOVERY */
 function walk(dir, acc = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (e.name.startsWith(".")) continue;
@@ -304,19 +257,15 @@ const REQUIRED = ["title", "slug", "type", "domain", "level", "status", "updated
 
 function loadNotes() {
   const notes = [];
-  /* Notes live ONLY in the numbered domain directories. Scanning by that rule
-     rather than by an exclusion list means tooling directories (deploy/,
-     scripts/, .github/) can carry their own README without failing the build —
-     and the deploy hook runs --check, so a false failure there blocks
-     publishing. */
+  /* Notes live ONLY in the numbered domain directories, so tooling folders
+     (deploy/, scripts/) can carry a README without failing the build — the
+     deploy hook runs --check, and a false failure there blocks publishing. */
   const domains = fs.readdirSync(ROOT, { withFileTypes: true })
     .filter(e => e.isDirectory() && /^\d{2}-/.test(e.name))
     .map(e => path.join(ROOT, e.name));
 
   for (const file of domains.flatMap(d => walk(d))) {
     const relFile = path.relative(ROOT, file).replace(/\\/g, "/");
-    if (ROOT_DOCS.includes(relFile)) continue;
-
     const raw = fs.readFileSync(file, "utf8");
     const { data, body } = parseFrontmatter(raw, relFile);
     if (!data) { err(relFile, "missing YAML frontmatter"); continue; }
@@ -331,23 +280,21 @@ function loadNotes() {
     if (data.slug && data.slug !== expectedSlug)
       err(relFile, `slug "${data.slug}" must match the filename "${expectedSlug}"`);
 
-    /* The one-line mental model is the first blockquote under the H1. It is
-       promoted to the page subtitle, so strip it from the body — otherwise it
-       renders twice, once as the subtitle and once as a quote. */
+    /* The lede: first blockquote under the H1, promoted to the page subtitle
+       and the INDEX entry. Stripped from the body so it never renders twice. */
     const lines = body.split("\n");
     let start = -1, end = -1;
     for (let i = 0; i < lines.length; i++) {
-      if (/^##\s/.test(lines[i])) break;              // reached the first section
+      if (/^##\s/.test(lines[i])) break;
       if (start === -1 && /^>\s+\S/.test(lines[i])) start = i;
       if (start !== -1) { if (/^>/.test(lines[i])) end = i; else if (lines[i].trim()) break; }
     }
-    let summary = "";
-    let bodyForRender = body;
+    let summary = "", bodyForRender = body;
     if (start !== -1) {
       summary = lines.slice(start, end + 1).map(l => l.replace(/^>\s?/, "").trim()).join(" ").trim();
       bodyForRender = [...lines.slice(0, start), ...lines.slice(end + 1)].join("\n");
     }
-    if (!summary) warn(relFile, "no one-sentence mental model (a `> ...` line) found");
+    if (!summary) warn(relFile, "no one-line summary (a `> ...` line under the H1)");
 
     notes.push({
       file, relFile, data, body: bodyForRender, summary,
@@ -355,151 +302,33 @@ function loadNotes() {
       title: data.title || expectedSlug,
       level: lvl || 1,
       out: relFile.replace(/\.md$/, ".html"),
+      keywords: [...(data.tags || []), ...(data.keywords || [])].join(" "),
     });
   }
   return notes;
 }
 
-/* --------------------------------------------------------------- 6. RENDER */
-function build() {
-  const notes = loadNotes();
-
-  const slugs = new Map();
+/* -------------------------------------------------------- 5. NAV STRUCTURE */
+function buildNav(notes) {
+  const order = Object.keys(DOMAIN_NAMES);
+  const groups = new Map();
   for (const n of notes) {
-    if (slugs.has(n.slug)) err(n.relFile, `duplicate slug "${n.slug}" (also in ${slugs.get(n.slug).relFile})`);
-    slugs.set(n.slug, n);
+    if (!groups.has(n.data.domain)) groups.set(n.data.domain, []);
+    groups.get(n.data.domain).push(n);
   }
-
-  /* cross-reference integrity: prerequisites/related must point at real notes */
-  for (const n of notes)
-    for (const key of ["prerequisites", "related"])
-      for (const ref of n.data[key] || [])
-        if (!slugs.has(ref)) err(n.relFile, `${key} references unknown slug "${ref}"`);
-
-  checkRootDocs(notes);
-
-  if (CHECK_ONLY) return report(notes);
-
-  fs.rmSync(DIST, { recursive: true, force: true });
-  fs.mkdirSync(path.join(DIST, "assets"), { recursive: true });
-  fs.copyFileSync(path.join(__dirname, "assets", "notebook.css"),
-                  path.join(DIST, "assets", "notebook.css"));
-  /* the living style guide ships with the site so the visual system is
-     always inspectable next to the notes it governs */
-  fs.copyFileSync(path.join(__dirname, "styleguide.html"), path.join(DIST, "styleguide.html"));
-
-  for (const n of notes) {
-    const depth = n.out.split("/").length - 1;
-    const up = depth ? "../".repeat(depth) : "./";
-    const ctx = {
-      file: n.file, name: n.relFile, slugs,
-      rel: target => up + target,      // dist paths mirror the repo tree
-    };
-
-    const bodyNoH1 = n.body.replace(/^#\s+.*$/m, "");
-    const bodyHtml = renderBody(bodyNoH1, ctx);
-
-    /* Dangling refs are already reported as errors by the linter. Render what
-       resolves rather than crashing the whole build — writing `related:` before
-       the target note exists is a normal step in drafting. */
-    const link = s => {
-      const t = slugs.get(s);
-      return t ? `<a href="${up + t.out}">${escapeHtml(t.title)}</a>` : null;
-    };
-    const chainOf = (key, label, sep) => {
-      const links = (n.data[key] || []).map(link).filter(Boolean);
-      return links.length ? `<span class="chain"><strong>${label}</strong> ${links.join(sep)}</span>` : "";
-    };
-    const chain = [
-      chainOf("prerequisites", "Needs first:", " → "),
-      chainOf("related", "Leads to:", " · "),
-    ].filter(Boolean).join("<br>");
-
-    const footer =
-      `<div class="related">${chain}</div>` +
-      `<div class="note-footer"><span>Level ${n.level} · ${escapeHtml(n.data.type)} · ${escapeHtml(n.data.status)}</span>` +
-      `<span>${escapeHtml(n.data.domain)}</span></div>`;
-
-    const html = shell({
-      title: n.title,
-      subtitle: n.summary,
-      tags: n.data.tags || [],
-      date: n.data.updated,
-      bodyHtml, footer,
-      cssPath: up + "assets/notebook.css",
-      homePath: up + "index.html",
-    });
-
-    const outPath = path.join(DIST, n.out);
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    fs.writeFileSync(outPath, html, "utf8");
-  }
-
-  writeGallery(notes);
-  writeIndexMd(notes);
-  return report(notes);
+  return [...groups.entries()]
+    .sort((a, b) => {
+      const ia = order.indexOf(a[0]), ib = order.indexOf(b[0]);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    })
+    .map(([domain, list]) => ({
+      id: domain,
+      name: DOMAIN_NAMES[domain] || domain,
+      notes: list.sort((a, b) => a.level - b.level || a.title.localeCompare(b.title)),
+    }));
 }
 
-/* ------------------------------------------------------- 7. GALLERY + INDEX */
-const byDomain = notes => {
-  const m = new Map();
-  for (const n of notes) (m.get(n.data.domain) || m.set(n.data.domain, []).get(n.data.domain)).push(n);
-  for (const list of m.values()) list.sort((a, b) => a.level - b.level || a.title.localeCompare(b.title));
-  return new Map([...m.entries()].sort((a, b) => a[0].localeCompare(b[0])));
-};
-
-function writeGallery(notes) {
-  const sections = [...byDomain(notes).entries()].map(([domain, list]) => `
-  <section class="section">
-    <h2 class="section-title"><span class="st-text">${escapeHtml(domain)}</span></h2>
-    <div class="card-grid">
-      ${list.map(n => `<article class="hand-box card">
-        <h3><a href="${n.out}">${escapeHtml(n.title)}</a>
-        <span class="level-badge lvl-${n.level}">L${n.level}</span></h3>
-        <p>${escapeHtml(n.summary)}</p>
-      </article>`).join("")}
-    </div>
-  </section>`).join("");
-
-  fs.writeFileSync(path.join(DIST, "index.html"), `<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gendi Notes</title>${FONTS}
-<link rel="stylesheet" href="assets/notebook.css"></head>
-<body><main class="note-page" id="main">
-  <div class="note-meta"><span class="note-tags"><span class="tag">DevOps</span> <span class="tag">SRE</span> <span class="tag">PlatformEngineering</span></span>
-  <span class="note-date">${new Date().toISOString().slice(0, 10)}</span></div>
-  <h1 class="note-title">Gendi Notes <span class="star">☆</span></h1>
-  <span class="title-underline"></span>
-  <p class="note-subtitle">A second brain for production engineering — ${notes.length} notes.</p>
-  ${sections}
-</main></body></html>`, "utf8");
-}
-
-/* INDEX.md is regenerated between markers so hand-written prose survives. */
-function writeIndexMd(notes) {
-  const idx = path.join(ROOT, "INDEX.md");
-  if (!fs.existsSync(idx)) return;
-  const cur = fs.readFileSync(idx, "utf8");
-  const S = "<!-- AUTO-INDEX:START -->", E = "<!-- AUTO-INDEX:END -->";
-  if (!cur.includes(S) || !cur.includes(E)) { warn("INDEX.md", "missing AUTO-INDEX markers; index not regenerated"); return; }
-
-  const body = [...byDomain(notes).entries()].map(([domain, list]) => {
-    const rows = list.map(n =>
-      `| L${n.level} | [${n.title}](${n.relFile}) | ${n.data.type} | ${n.summary} |`).join("\n");
-    return `### ${domain}\n\n| Lvl | Note | Type | Mental model |\n|:---|:---|:---|:---|\n${rows}\n`;
-  }).join("\n");
-
-  const generated = `${S}\n<!-- Generated by \`node site/build.mjs\`. Do not edit by hand. -->\n\n` +
-    `**${notes.length} notes.** Last generated ${new Date().toISOString().slice(0, 10)}.\n\n${body}\n${E}`;
-
-  fs.writeFileSync(idx, cur.slice(0, cur.indexOf(S)) + generated + cur.slice(cur.indexOf(E) + E.length), "utf8");
-}
-
-/* ------------------------------------------------- 7b. ROOT DOCUMENT LINKS */
-/* Root docs are exempt from frontmatter, but their links still have to resolve.
-   README and ROADMAP are the most-followed paths in the repo, so an unchecked
-   dead link there is worse than one buried in a note. */
+/* --------------------------------------------------- 6. ROOT DOCUMENT LINKS */
 function checkRootDocs(notes) {
   const byPath = new Set(notes.map(n => n.relFile));
   for (const doc of ROOT_DOCS) {
@@ -511,20 +340,84 @@ function checkRootDocs(notes) {
       if (/^(https?:|mailto:|#)/.test(href)) continue;
       const target = href.split("#")[0];
       if (!target) continue;
-      if (!fs.existsSync(path.resolve(ROOT, target))) {
-        err(doc, `broken link: ${target}`);
-      } else if (/^\d{2}-/.test(target) && target.endsWith(".md") && !byPath.has(target)) {
-        /* Only a .md inside a numbered domain is expected to be an indexed
-           note. Links to tooling docs (deploy/README.md, site/README.md) are
-           legitimate, and warning about them would train you to ignore
-           warnings — which is worse than not having them. */
+      if (!fs.existsSync(path.resolve(ROOT, target))) err(doc, `broken link: ${target}`);
+      else if (/^\d{2}-/.test(target) && target.endsWith(".md") && !byPath.has(target))
         warn(doc, `links into a domain directory but is not an indexed note: ${target}`);
-      }
     }
   }
 }
 
-/* --------------------------------------------------------------- 8. REPORT */
+/* --------------------------------------------------------------- 7. BUILD */
+function build() {
+  const notes = loadNotes();
+
+  const slugs = new Map();
+  for (const n of notes) {
+    if (slugs.has(n.slug)) err(n.relFile, `duplicate slug "${n.slug}" (also ${slugs.get(n.slug).relFile})`);
+    slugs.set(n.slug, n);
+  }
+  for (const n of notes)
+    for (const key of ["prerequisites", "related"])
+      for (const ref of n.data[key] || [])
+        if (!slugs.has(ref)) err(n.relFile, `${key} references unknown slug "${ref}"`);
+
+  checkRootDocs(notes);
+  if (CHECK_ONLY) return report(notes);
+
+  const nav = buildNav(notes);
+  const flat = nav.flatMap(g => g.notes);     // reading order for prev/next
+
+  fs.rmSync(DIST, { recursive: true, force: true });
+  fs.mkdirSync(path.join(DIST, "assets"), { recursive: true });
+  for (const f of ["app.css", "app.js", "boot.js"])
+    fs.copyFileSync(path.join(__dirname, "assets", f), path.join(DIST, "assets", f));
+
+  notes.forEach(n => {
+    const depth = n.out.split("/").length - 1;
+    const up = depth ? "../".repeat(depth) : "";
+    const ctx = { file: n.file, name: n.relFile, slugs, up };
+    const toc = [];
+    const bodyHtml = renderBody(n.body.replace(/^#\s+.*$/m, ""), ctx, toc);
+
+    const idx = flat.indexOf(n);
+    const resolve = list => (list || []).map(s => slugs.get(s)).filter(Boolean);
+
+    fs.mkdirSync(path.dirname(path.join(DIST, n.out)), { recursive: true });
+    fs.writeFileSync(path.join(DIST, n.out), notePage({
+      note: n, bodyHtml, toc, nav, up,
+      prev: flat[idx - 1] || null,
+      next: flat[idx + 1] || null,
+      prereqs: resolve(n.data.prerequisites),
+      related: resolve(n.data.related),
+    }), "utf8");
+  });
+
+  fs.writeFileSync(path.join(DIST, "index.html"), homePage({ nav, notes }), "utf8");
+  writeIndexMd(notes, nav);
+  return report(notes);
+}
+
+/* INDEX.md is regenerated between markers so hand-written prose survives. */
+function writeIndexMd(notes, nav) {
+  const idx = path.join(ROOT, "INDEX.md");
+  if (!fs.existsSync(idx)) return;
+  const cur = fs.readFileSync(idx, "utf8");
+  const S = "<!-- AUTO-INDEX:START -->", E = "<!-- AUTO-INDEX:END -->";
+  if (!cur.includes(S) || !cur.includes(E)) { warn("INDEX.md", "missing AUTO-INDEX markers"); return; }
+
+  const body = nav.map(g => {
+    const rows = g.notes.map(n =>
+      `| L${n.level} | [${n.title}](${n.relFile}) | ${n.data.type} | ${n.summary} |`).join("\n");
+    return `### ${g.name}\n\n| Lvl | Note | Type | Summary |\n|:---|:---|:---|:---|\n${rows}\n`;
+  }).join("\n");
+
+  const generated = `${S}\n<!-- Generated by \`node site/build.mjs\`. Do not edit by hand. -->\n\n` +
+    `**${notes.length} notes.** Last generated ${new Date().toISOString().slice(0, 10)}.\n\n${body}\n${E}`;
+
+  fs.writeFileSync(idx, cur.slice(0, cur.indexOf(S)) + generated + cur.slice(cur.indexOf(E) + E.length), "utf8");
+}
+
+/* -------------------------------------------------------------- 8. REPORT */
 function report(notes) {
   const errors = problems.filter(p => p.sev === "ERROR");
   const warns  = problems.filter(p => p.sev === "WARN");

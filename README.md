@@ -1,12 +1,31 @@
 # Gendi Notes
 
-**A handwritten-style engineering second brain for DevOps, SRE and Platform Engineering.**
+**A practical engineering reference for DevOps, SRE and Platform Engineering.**
 
-Not a documentation site. Not a wiki. A set of notes built to be *revised
-quickly*, *trusted under pressure*, and *used to prepare for senior interviews*.
+Every topic answers the same three questions before anything else:
 
-Every note answers the same twelve questions, uses the same visual language, and
-links into the same knowledge graph — so the hundredth note reads like the first.
+1. **What is it?** — in plain language, no jargon
+2. **What is it made of?** — the components, and which one you are dealing with
+3. **How do you actually use it?** — real commands, real files, real output
+
+Then, and only then, how it works underneath and what goes wrong in production.
+
+---
+
+## Read it
+
+The notes are Markdown and read fine on GitHub. They are designed to be
+*rendered*, though — sidebar navigation, search, on-page contents, light and
+dark themes.
+
+```bash
+node site/build.mjs && node site/serve.mjs
+```
+
+Open <http://localhost:8080>. No `npm install`, no dependencies, Node 18+.
+
+Hosting it permanently on your own server — domain, HTTPS, password,
+`git push` to deploy — is covered in [deploy/README.md](deploy/README.md).
 
 ---
 
@@ -14,144 +33,99 @@ links into the same knowledge graph — so the hundredth note reads like the fir
 
 | If you want to… | Go to |
 |:---|:---|
-| See every note, grouped and levelled | [INDEX.md](INDEX.md) |
-| Follow a learning path from Linux → Senior | [ROADMAP.md](ROADMAP.md) |
-| Add a note | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Understand *how* these notes are written | [PRINCIPLES.md](PRINCIPLES.md) |
+| Every note, grouped and levelled | [INDEX.md](INDEX.md) |
+| A learning path, in order | [ROADMAP.md](ROADMAP.md) |
 | Look up a term | [GLOSSARY.md](GLOSSARY.md) |
+| Add a note | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| How these notes are written | [PRINCIPLES.md](PRINCIPLES.md) |
 
-**Two notes that show the quality bar:**
-[Kubernetes Networking](03-kubernetes/networking/kubernetes-networking.md) ·
-[High Latency with Normal CPU](15-production/troubleshooting-playbooks/high-latency-normal-cpu.md)
+**If you are new,** read in this order:
 
----
+[Linux Basics](00-foundations/linux/linux-basics.md) →
+[Networking Basics](00-foundations/networking/networking-basics.md) →
+[Git](01-devops/git/git.md) →
+[Docker](02-containers/docker/docker.md) →
+[Kubernetes Basics](03-kubernetes/fundamentals/kubernetes-basics.md)
 
-## Read them as a notebook
-
-The notes are plain Markdown and read fine on GitHub. They were designed,
-though, to be *rendered* — warm paper, blue ink, red underlines, circled section
-numbers, hand-drawn boxes.
-
-```bash
-node site/build.mjs && node site/serve.mjs
-```
-
-Then open <http://localhost:8080>. No `npm install`, no dependencies, Node 18+.
-
-The visual system itself is documented and inspectable at
-<http://localhost:8080/styleguide.html>.
-
-### Hosting them permanently
-
-The build output is static HTML, so any web server can host it — no Node needed
-on the server. [`deploy/README.md`](deploy/README.md) walks through an Ubuntu
-setup with your own domain, automatic HTTPS, a password, and `git push` as the
-deploy step.
+**If something is broken right now:**
+[Kubernetes Troubleshooting](03-kubernetes/troubleshooting/kubernetes-troubleshooting.md) ·
+[Linux Commands](14-cheat-sheets/linux/linux-commands.md) ·
+[kubectl Cheat Sheet](14-cheat-sheets/kubernetes/kubectl-commands.md)
 
 ---
 
 ## The build is also the linter
 
-`site/build.mjs` does three jobs, and the second two are the reason it exists:
+`site/build.mjs` does three jobs, and the last two are why it exists:
 
-1. Renders every note into the notebook visual system.
-2. **Regenerates `INDEX.md`** from the notes themselves — a hand-maintained index
-   rots within a month; this one cannot.
+1. Renders every note into the site.
+2. **Regenerates `INDEX.md`** from the notes themselves — a hand-maintained
+   index goes stale within a month; this one cannot.
 3. **Fails on a broken cross-reference** — an unknown `[[wikilink]]`, a
-   `related:` slug that does not resolve, a dead relative link, a duplicate slug,
-   a missing frontmatter field.
+   `related:` slug that does not resolve, a dead link, a duplicate slug, a
+   missing frontmatter field.
 
 ```bash
 node site/build.mjs --check     # lint only, no writes, exit 1 on error
 ```
 
-Run it before you commit. If it passes, the index is accurate and every link in
-the repository resolves.
+The deploy hook runs this before publishing, so a broken link fails the deploy
+and the live site keeps serving the previous version.
 
 ---
 
 ## Repository structure
 
 ```
-00-foundations/          Linux, networking, processes — everything else assumes these
-01-devops/               Git, CI/CD, release engineering
-02-containers/           What a container actually is, images, registries, security
-03-kubernetes/           Architecture through troubleshooting, by subsystem
-04-cloud/                AWS / Azure / GCP, plus cross-provider concepts
-05-infrastructure-as-code/   Terraform, Terragrunt, patterns
-06-platform-engineering/ IDPs, golden paths, developer experience
-07-sre/                  SLOs, error budgets, incident management, DR
+00-foundations/          Linux, networking, DNS, SSH — everything assumes these
+01-devops/               Git, CI/CD
+02-containers/           Docker, images and registries
+03-kubernetes/           Basics, pods, deployments, services, troubleshooting
+04-cloud/                AWS / Azure / GCP
+05-infrastructure-as-code/   Terraform
+06-platform-engineering/ Internal platforms, developer experience
+07-sre/                  SLOs, error budgets, incidents
 08-observability/        Metrics, logs, traces, alerting
-09-databases/            Relational, NoSQL, replication, indexing, transactions
-10-distributed-systems/  CAP, consensus, replication, failure modes
-11-security/             Linux, Kubernetes, cloud, secrets, supply chain
-12-system-design/        Building blocks, caching, messaging, complete designs
-13-interviews/           By level and by discipline, with the traps named
+09-databases/            Relational, NoSQL, indexing, replication
+10-distributed-systems/  CAP, consensus, failure modes
+11-security/             Linux, Kubernetes, cloud, secrets
+12-system-design/        Building blocks, caching, complete designs
+13-interviews/           By level and discipline
 14-cheat-sheets/         Optimised for revision and for 3am
-15-production/           Incidents, postmortems, runbooks, playbooks
+15-production/           Incidents, postmortems, runbooks
 
-templates/               Seven note types. Always start from one
-site/                    The visual system, the renderer, the linter
+templates/               Note types. Always start from one
+site/                    Design system, renderer, linter
+deploy/                  Server setup and the git deploy hook
 ```
 
-Two deliberate departures from the obvious layout, both to stop the same concept
-being written twice:
-
-- **`10-distributed-systems/cap-and-consistency/`** instead of three sibling
-  directories for consistency, availability and partition tolerance. Those three
-  cannot be studied apart, and separate directories would produce three notes
-  each restating CAP.
-- **`12-system-design/building-blocks/`** instead of `networking/`, `storage/`
-  and `databases/`. Those would duplicate `00-foundations` and `09-databases`.
-  System design needs *how to choose* a component; the concept itself lives once,
-  in its own domain, and is linked to.
-
----
-
-## What a note looks like
-
-Every concept note answers, in order: what is it · why does it exist · mental
-model · how it works · architecture · example · failure modes · troubleshooting ·
-common mistakes · senior notes · interview traps · key takeaway.
-
-Sections you cannot fill honestly get deleted. An honest six-section note beats a
-padded eleven-section one.
-
-Beyond that, five rules do most of the work:
-
-- **Why over what.** Anything that only states *what* something is belongs in the
-  official docs, not here.
-- **Trade-offs are mandatory** at Level 4+. A note with no trade-off has not
-  reached senior depth.
-- **Every command explains its output.** A command you cannot interpret is cargo
-  cult.
-- **Failure modes over happy paths.** The happy path is in the vendor's tutorial.
-- **Diagrams over paragraphs.** If a paragraph runs past three lines, it wants to
-  be a diagram, a table, or a list.
+Directories with no notes yet are placeholders — the structure is deliberate, so
+a new note always has an obvious home.
 
 ---
 
 ## Levels
 
-Notes are graded 1–5 and the level appears in `INDEX.md` and on every rendered
-page.
+Every note is graded, and the level shows in the index and on the page.
 
 | | Level | Means |
 |:---|:---|:---|
-| **L1** | Fundamentals | The mechanism, plainly |
-| **L2** | Practical | You can use it correctly |
-| **L3** | Production | You know how it breaks |
+| **L1** | Beginner | You have not used this before |
+| **L2** | Practical | You can use it correctly day to day |
+| **L3** | Production | You know how it fails and how to debug it |
 | **L4** | Senior | You can defend the trade-offs |
-| **L5** | Staff | You can design the thing itself, and say what it is bad at |
+| **L5** | Staff | You can design it, and say what it is bad at |
+
+Every note starts at L1 comprehension regardless of its level. The level says
+how far it goes, not where it begins.
 
 ---
 
-## Status
+## The quality bar
 
-**17 notes**, all linting clean. This is the foundation, not the finished
-library — the architecture, the templates, the visual system and a representative
-note in each of the seven types.
+> Would someone who already knows the basics find something here they did not
+> have?
 
-Deliberately not hundreds of shallow files. The bar for adding one is:
-
-> *Would a senior engineer actually keep this note?*
+Deliberately not hundreds of shallow files. A note that restates the official
+documentation does not go in — it dilutes search and makes the collection feel
+untrustworthy.

@@ -13,7 +13,6 @@ with.
 
 **SLI** — a *measurement* of service behaviour, expressed as good events ÷ valid
 events. Just a number; missing it has no consequence.
-→ [SLI, SLO, SLA and Error Budgets](07-sre/sli-slo-sla/sli-slo-sla.md)
 
 **SLO** — an internal *target* for an SLI. Missing it triggers engineering
 policy, not money.
@@ -39,7 +38,6 @@ saturation, which is why CPU dashboards mislead.
 
 **Saturation** — the amount of queued work a resource cannot service yet. **This
 is where latency comes from.**
-→ [High Latency with Normal CPU](15-production/troubleshooting-playbooks/high-latency-normal-cpu.md)
 
 **Little's Law** — `L = λW`. Items in a system = arrival rate × time in system.
 Why a small upstream slowdown produces a large latency increase downstream once a
@@ -47,11 +45,11 @@ pool saturates.
 
 **Load average (Linux)** — runnable **plus uninterruptible-sleep** tasks. High
 load with idle CPU usually means blocked I/O, not CPU pressure.
-→ [Linux Performance Triage](14-cheat-sheets/troubleshooting/linux-performance-triage.md)
+→ [Linux Command Cheat Sheet](14-cheat-sheets/linux/linux-commands.md)
 
 **Throttling (CFS)** — a container exceeding its CPU quota is frozen for the rest
 of the 100ms window. Reports **low** CPU utilisation while adding latency.
-→ [What a Container Actually Is](02-containers/docker/container-isolation.md)
+→ [Docker](02-containers/docker/docker.md)
 
 **Tail latency** — the slow end of the distribution (p99, p99.9). The only part
 users complain about; the part averages erase.
@@ -63,7 +61,7 @@ users complain about; the part averages erase.
 **NAT** — rewriting addresses in a packet. **DNAT** rewrites the destination
 (what a Service does); **SNAT** rewrites the source (what a NodePort does with
 `externalTrafficPolicy: Cluster`).
-→ [Kubernetes Networking](03-kubernetes/networking/kubernetes-networking.md)
+→ [Kubernetes Services](03-kubernetes/services/kubernetes-services.md)
 
 **conntrack** — the kernel's connection-tracking table. **Host-global**, so one
 container can exhaust it for every other container on the node.
@@ -73,7 +71,7 @@ mismatch lets the handshake succeed and then hangs on large payloads.
 
 **Half-open connection** — one side has no record of a connection the other
 believes is alive. Effectively undetectable by TCP alone.
-→ [TCP Handshake and Connection State](00-foundations/networking/tcp-handshake.md)
+→ [Networking Basics](00-foundations/networking/networking-basics.md)
 
 **Half-closed connection** — one direction deliberately shut down with
 `shutdown(SHUT_WR)`. Legal and intentional; unrelated to half-open.
@@ -84,7 +82,7 @@ the client believes it is connected while the server has dropped it.
 **ndots** — how many dots a name needs before the resolver tries it as-is rather
 than appending search domains. `ndots:5` in Kubernetes turns one external lookup
 into up to ten queries.
-→ [Kubernetes DNS and CoreDNS](03-kubernetes/dns/kubernetes-dns.md)
+→ [DNS](00-foundations/networking/dns.md)
 
 ---
 
@@ -92,7 +90,7 @@ into up to ten queries.
 
 **Container** — a process with namespaces (what it sees) and cgroups (what it
 uses). Not a lightweight VM; it shares the host kernel.
-→ [What a Container Actually Is](02-containers/docker/container-isolation.md)
+→ [Docker](02-containers/docker/docker.md)
 
 **Namespace (Linux)** — isolates *what a process can see*: PIDs, network,
 mounts, users. Unrelated to a Kubernetes namespace.
@@ -118,7 +116,7 @@ removes traffic without restarting.
 
 **Liveness probe** — restarts the container on failure. Can turn a slowdown into
 an outage.
-→ [Pod in CrashLoopBackOff](03-kubernetes/troubleshooting/pod-crashloopbackoff.md)
+→ [Kubernetes Troubleshooting](03-kubernetes/troubleshooting/kubernetes-troubleshooting.md)
 
 **Startup probe** — suspends liveness until the app has started. The fix for
 slow-starting applications.
@@ -135,7 +133,6 @@ no kube-proxy.
 
 **Cache stampede / thundering herd** — many concurrent requests miss the same key
 at the same instant and all hit the origin.
-→ [Cache Stampede](12-system-design/caching/cache-stampede.md)
 
 **Cache penetration** — repeated requests for a key that never exists. Fixed by
 caching the negative result.
@@ -148,7 +145,6 @@ The default stampede defence.
 
 **Selectivity** — the fraction of rows a predicate eliminates. Low selectivity is
 why the planner correctly ignores your index.
-→ [Database Indexes](09-databases/indexing/database-indexes.md)
 
 **Covering index** — contains every column a query needs, so the table itself is
 never read.
@@ -162,7 +158,7 @@ index adds one.
 
 **Blast radius** — what breaks when this fails. The organising question for
 Terraform state splitting, cluster design and deployment strategy.
-→ [Terraform State](05-infrastructure-as-code/terraform/terraform-state.md)
+→ [Terraform](05-infrastructure-as-code/terraform/terraform.md)
 
 **Drift** — reality diverging from declared state.
 
@@ -174,7 +170,6 @@ Deliberate; distinct from partial failure, which is not.
 
 **Fail open / fail closed** — on dependency failure, allow everything or deny
 everything. Both are usually wrong; a *bounded* fallback is usually right.
-→ [Design — Distributed Rate Limiter](12-system-design/complete-designs/rate-limiter.md)
 
 **Retry storm** — timeouts causing retries causing load causing timeouts. Inverts
 cause and effect: request rate climbs *because of* the latency.
