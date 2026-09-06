@@ -1,0 +1,16 @@
+# Normalise text in the repository to LF, whatever the working tree uses.
+* text=auto
+
+# Shell scripts MUST stay LF even when checked out on Windows. A CRLF shell
+# script fails on Linux with `\r: command not found` — an error that names the
+# wrong problem and costs an hour. This matters for deploy/post-receive, which
+# runs on the server.
+*.sh        text eol=lf
+deploy/post-receive text eol=lf
+
+# Keep the notes and config LF so diffs stay clean across machines.
+*.md        text eol=lf
+*.css       text eol=lf
+*.mjs       text eol=lf
+*.html      text eol=lf
+Caddyfile   text eol=lf

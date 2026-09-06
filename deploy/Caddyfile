@@ -7,11 +7,11 @@
 #   1. The DNS A record for this domain must already point at this server.
 #   2. Ports 80 AND 443 must be reachable from the internet (80 is used for
 #      the ACME challenge and the HTTP->HTTPS redirect).
+#
+# CHANGE THREE THINGS: the domain below, the username, and the password hash.
 # ----------------------------------------------------------------------------
 
-# CHANGE THIS to your domain.
 notes.example.com {
-
 	root * /var/www/gendi-notes
 	file_server
 
@@ -19,13 +19,11 @@ notes.example.com {
 	# Generate the hash ON THE SERVER with:
 	#     caddy hash-password
 	# It prompts for the password, so it never lands in your shell history.
-	# Paste the output (starts with $2a$) below, replacing the placeholder.
+	# Paste the output (starts with $2a$) below.
 	#
-	# NOTE ON SYNTAX: this directive is `basic_auth` in Caddy 2.8+ and
-	# `basicauth` in 2.0-2.7. The old name still works as a deprecated alias,
-	# so `basicauth` is used here for compatibility with both. If your Caddy
-	# is 2.8+ and you want no deprecation warning, rename it to `basic_auth`.
-	basicauth {
+	# SYNTAX BY VERSION: `basic_auth` is correct for Caddy 2.8+. On 2.0-2.7 the
+	# directive is spelled `basicauth`. Check with `caddy version`.
+	basic_auth {
 		gendi PASTE_YOUR_BCRYPT_HASH_HERE
 	}
 
@@ -35,7 +33,7 @@ notes.example.com {
 
 	# ---- caching -------------------------------------------------------------
 	# The CSS filename never changes, so a long cache would serve stale styling
-	# after a redeploy. Keep HTML uncached and let the CSS revalidate.
+	# after a redeploy. Keep HTML uncached and let the assets revalidate.
 	@html path *.html /
 	header @html Cache-Control "no-cache"
 
@@ -45,8 +43,8 @@ notes.example.com {
 	# ---- security headers ----------------------------------------------------
 	header {
 		# The pages load webfonts from Google Fonts and nothing else. This CSP
-		# permits exactly that and blocks everything not needed, including
-		# any inline or external script (the notes need no JavaScript at all).
+		# permits exactly that and blocks everything not needed, including any
+		# script (the notes need no JavaScript at all).
 		Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; script-src 'none'; frame-ancestors 'none'; base-uri 'none'"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "no-referrer"
@@ -54,10 +52,14 @@ notes.example.com {
 		-Server
 	}
 
+	# ---- logging -------------------------------------------------------------
+	# Deliberately journald, not a file. A custom file under /var/log/caddy
+	# requires creating that directory and chowning it to the caddy user first,
+	# and Caddy refuses to load the whole config if it cannot open the file —
+	# so one missing directory takes the site down. journald needs no setup,
+	# gets rotation for free, and keeps access logs next to Caddy's own errors:
+	#     sudo journalctl -u caddy -f
 	log {
-		output file /var/log/caddy/gendi-notes.log {
-			roll_size 10MiB
-			roll_keep 5
-		}
+		output stderr
 	}
 }

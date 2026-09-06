@@ -125,12 +125,34 @@ exactly three things:
 | `PASTE_YOUR_BCRYPT_HASH_HERE` | the hash from B5 |
 | `gendi` (the username) | whatever username you want, if not `gendi` |
 
-Validate before reloading — a syntax error would take the site down:
+Check your Caddy version, because one directive was renamed:
 
 ```bash
+caddy version
+```
+
+The supplied file uses `basic_auth`, correct for **2.8 and later**. On 2.0–2.7
+rename it to `basicauth`.
+
+Then format, validate and reload. **Validate before reloading** — Caddy refuses
+a bad config wholesale, so a mistake here leaves the previous config running and
+your site not live:
+
+```bash
+sudo caddy fmt --overwrite /etc/caddy/Caddyfile
 sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl reload caddy
 sudo systemctl status caddy --no-pager
+```
+
+`caddy fmt` normalises indentation; without it Caddy logs a formatting warning
+on every load.
+
+Confirm it is actually serving before moving on — expect `401` (the password
+prompt), which proves both TLS and basic auth are working:
+
+```bash
+curl -sI https://notes.example.com | head -1
 ```
 
 Caddy is enabled on boot by its package, so it comes back after a reboot on its
@@ -197,26 +219,43 @@ catch mistakes yourself:
 node site/build.mjs --check
 ```
 
+**Run that on your own machine, from inside the notes directory** — it is not a
+server command. `node` resolves `site/build.mjs` relative to the current
+directory, so running it from `~` gives `Cannot find module
+'/home/ubuntu/site/build.mjs'`. On the server the source only exists after your
+first push, at `/srv/gendi-notes/src`, and the hook runs the check for you
+there.
+
 ---
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |:---|:---|:---|
+| `Cannot find module '/home/ubuntu/site/build.mjs'` | Ran the build from the wrong directory — it is a command for **your machine**, inside the notes folder | See Part D |
+| `Reload failed` + `permission denied` on a log file | A custom `output file` path whose directory Caddy cannot create. **Caddy rejects the entire config if it cannot open the log**, so the site stays down | Use `log { output stderr }` as the supplied Caddyfile does; or `sudo mkdir -p /var/log/caddy && sudo chown caddy:caddy /var/log/caddy` |
+| `the 'basicauth' directive is deprecated` | Caddy 2.8+ renamed it | Use `basic_auth` |
+| `Caddyfile input is not formatted` | Indentation | `sudo caddy fmt --overwrite /etc/caddy/Caddyfile` |
 | Push succeeds, site unchanged | Hook not executable | `chmod +x /srv/gendi-notes/repo.git/hooks/post-receive` |
 | Push succeeds, hook silent | Pushed a branch other than `main` | The hook only deploys `main` |
 | `node: command not found` in hook output | Non-interactive SSH has a minimal `PATH` | Add `export PATH=/usr/bin:/usr/local/bin:$PATH` near the top of the hook |
 | No certificate / HTTPS fails | DNS not pointing at the server yet, or port 80 blocked | Recheck Part A, then `sudo journalctl -u caddy -n 50` |
 | 403 Forbidden | Caddy cannot read the webroot | `chmod 755 /var/www/gendi-notes` |
+| 404 on everything | Nothing published yet — the first push has not happened | Complete Part C |
 | Password prompt loops | Hash pasted with a line break, or `$` mangled | Re-run `caddy hash-password`, paste as one line |
-| Styling missing, text plain | `assets/notebook.css` did not publish | Check `ls /var/www/gendi-notes/assets/` |
+| Styling missing, text plain | `assets/notebook.css` did not publish | `ls /var/www/gendi-notes/assets/` |
 
-Server-side logs:
+Everything Caddy does — certificates, startup, errors **and** access logs — goes
+to journald:
 
 ```bash
-sudo journalctl -u caddy -f              # certificates, startup, errors
-sudo tail -f /var/log/caddy/gendi-notes.log   # requests
+sudo journalctl -u caddy -f          # follow live
+sudo journalctl -u caddy -n 50       # last 50 lines
 ```
+
+A note on ordering: Caddy will not serve anything until Part C has published
+files, so a `401` from `curl -sI` before your first push is the correct
+result — auth is working and there is simply nothing behind it yet.
 
 ---
 
