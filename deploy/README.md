@@ -76,16 +76,89 @@ sudo apt update
 sudo apt install -y caddy
 ```
 
-### B3. Open the firewall
+### B3. Open the firewall — **both layers**
 
-Both ports are required — 80 for the ACME challenge and the HTTPS redirect,
-443 for the site itself.
+Both ports are required: **80** for the ACME challenge and the HTTP→HTTPS
+redirect, **443** for the site. Miss port 80 and no certificate is ever issued.
+
+On a cloud VM there are **two** firewalls, and opening only one is the most
+common reason a correctly configured site is unreachable.
+
+#### Layer 1 — the instance
+
+Check which firewall you actually have. Do not assume `ufw`:
+
+```bash
+which ufw || echo "no ufw — use iptables below"
+sudo iptables -L INPUT -n --line-numbers
+```
+
+**If `ufw` exists** (most DigitalOcean/Hetzner/generic Ubuntu):
 
 ```bash
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw status
 ```
+
+**If it does not** — this is the case on **Oracle Cloud (OCI)** images, which
+ship raw iptables with a `REJECT` catch-all and no ufw at all:
+
+```bash
+# Look at the numbered output above. Find the REJECT line and insert BEFORE it,
+# and AFTER the port-22 ACCEPT so the SSH rule is never displaced.
+# On a stock OCI image the REJECT is rule 5:
+sudo iptables -I INPUT 5 -p tcp --dport 80  -j ACCEPT -m comment --comment "http (caddy)"
+sudo iptables -I INPUT 6 -p tcp --dport 443 -j ACCEPT -m comment --comment "https (caddy)"
+
+sudo iptables -L INPUT -n --line-numbers   # verify 22 is still allowed
+```
+
+iptables rules are lost on reboot unless saved:
+
+```bash
+sudo apt-get install -y iptables-persistent   # if not already installed
+sudo netfilter-persistent save
+```
+
+#### Layer 2 — the cloud provider's virtual firewall
+
+Instance-level rules are **not enough**. The provider filters traffic before it
+reaches the VM, and this is configured in the web console, not over SSH.
+
+**Oracle Cloud (OCI):**
+
+1. Console → **Compute → Instances** → your instance.
+2. Click the **Virtual cloud network** link (or Primary VNIC → Subnet).
+3. **Security Lists** → the subnet's security list (usually "Default Security
+   List for …").
+4. **Add Ingress Rules**, one per port:
+
+   | Field | Value |
+   |:---|:---|
+   | Stateless | unchecked |
+   | Source Type | CIDR |
+   | Source CIDR | `0.0.0.0/0` |
+   | IP Protocol | TCP |
+   | Source Port Range | leave blank (all) |
+   | Destination Port Range | `80` — then repeat for `443` |
+
+   If the instance uses a **Network Security Group** instead, add the same rules
+   there (Instance → Primary VNIC → Network Security Groups).
+
+**AWS:** the instance's Security Group → Inbound rules → allow TCP 80 and 443.
+**Azure:** the NIC or subnet Network Security Group → Inbound security rules.
+**GCP:** VPC network → Firewall → allow `tcp:80,tcp:443` to the instance's tag.
+
+Verify from **outside** the server before continuing — this is the check that
+actually proves both layers are open:
+
+```bash
+curl -sS -o /dev/null -w "%{http_code}\n" --max-time 15 http://notes.example.com/
+```
+
+A timeout means a firewall is still closed. `308` (the redirect to HTTPS) or
+`401` means you are through.
 
 ### B4. Create the directories
 
@@ -240,6 +313,10 @@ there.
 | Push succeeds, hook silent | Pushed a branch other than `main` | The hook only deploys `main` |
 | `node: command not found` in hook output | Non-interactive SSH has a minimal `PATH` | Add `export PATH=/usr/bin:/usr/local/bin:$PATH` near the top of the hook |
 | No certificate / HTTPS fails | DNS not pointing at the server yet, or port 80 blocked | Recheck Part A, then `sudo journalctl -u caddy -n 50` |
+| `Timeout during connect (likely firewall problem)` in the ACME log | Port 80 unreachable from the internet. Caddy is listening, so it is a firewall — usually the **provider's** virtual firewall, not the instance's | Work through **both layers** in B3 |
+| `sudo: ufw: command not found` | OCI images have no ufw | Use the iptables commands in B3 |
+| Certificate still failing after opening the ports | Let's Encrypt rate-limits **failed** validations (5 per hostname per hour) | Caddy retries on its own with backoff. Wait, and watch `journalctl -u caddy -f` |
+| `too many certificates already issued for: <domain>` | You are on a shared dynamic-DNS domain (`publicvm.com`, `duckdns.org`, …). The weekly limit is per registered domain and you share it with every other user of it | Use a domain you own, or a different dynamic-DNS provider that is on the Public Suffix List |
 | 403 Forbidden | Caddy cannot read the webroot | `chmod 755 /var/www/gendi-notes` |
 | 404 on everything | Nothing published yet — the first push has not happened | Complete Part C |
 | Password prompt loops | Hash pasted with a line break, or `$` mangled | Re-run `caddy hash-password`, paste as one line |
