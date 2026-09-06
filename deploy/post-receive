@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Gendi Notes — git post-receive hook
+# ----------------------------------------------------------------------------
+# Install to /srv/gendi-notes/repo.git/hooks/post-receive  (chmod +x)
+#
+# Runs on the server every time you `git push`. It checks out the pushed
+# commit, rebuilds the site, and publishes it — so a push IS the deploy.
+# ----------------------------------------------------------------------------
+set -euo pipefail
+
+REPO=/srv/gendi-notes/repo.git
+SRC=/srv/gendi-notes/src
+WEBROOT=/var/www/gendi-notes
+BRANCH=main
+
+while read -r _old _new ref; do
+	[ "$ref" = "refs/heads/$BRANCH" ] || { echo "→ ignoring $ref (only $BRANCH deploys)"; continue; }
+
+	echo "→ checking out $BRANCH"
+	mkdir -p "$SRC"
+	git --git-dir="$REPO" --work-tree="$SRC" checkout -f "$BRANCH"
+
+	cd "$SRC"
+
+	# Build AND lint. --check first so a broken cross-link fails the deploy
+	# before anything is published, rather than after.
+	echo "→ linting"
+	node site/build.mjs --check
+
+	echo "→ building"
+	node site/build.mjs --quiet
+
+	# Publish atomically enough: rsync --delete removes pages for notes that
+	# were deleted, which a plain copy would leave behind forever.
+	echo "→ publishing to $WEBROOT"
+	mkdir -p "$WEBROOT"
+	rsync -a --delete "$SRC/site/dist/" "$WEBROOT/"
+
+	echo "✓ deployed $(find "$WEBROOT" -name '*.html' | wc -l) pages"
+done

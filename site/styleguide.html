@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visual System — Gendi Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&display=swap">
+<link rel="stylesheet" href="assets/notebook.css">
+</head>
+<body>
+<main class="note-page" id="main">
+
+  <div class="note-meta">
+    <span class="note-tags"><span class="tag">design</span> <span class="tag">visual-system</span></span>
+    <span class="note-date">2026-09-05</span>
+  </div>
+
+  <h1 class="note-title">Visual System <span class="star" aria-hidden="true">☆</span></h1>
+  <span class="title-underline" aria-hidden="true"></span>
+  <p class="note-subtitle">Every component in one page. If it is not here, do not invent it — extend this file instead.</p>
+
+  <section class="section">
+    <h2 class="section-title"><span class="section-number">①</span><span class="st-text">Sections and emphasis</span></h2>
+    <p>Body text sits on the ruled baseline grid. Use <strong>bold</strong> for the load-bearing
+    word in a sentence, <em>italics</em> sparingly, and <span class="hl-red">red</span> only for
+    terms of art — never for a whole clause. Inline commands look like <code>kubectl get pods</code>.</p>
+    <p>Markdown source: <code>## ① Title</code> opens a numbered section, <code>==term==</code>
+    makes red emphasis.</p>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title"><span class="section-number">②</span><span class="st-text">Diagrams</span></h2>
+    <div class="diagram">┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│   client    │ ───▶ │  ingress    │ ───▶ │   service   │
+└─────────────┘      └─────────────┘      └─────────────┘
+                            │
+                            ▼
+                     ┌─────────────┐
+                     │    pods     │
+                     └─────────────┘</div>
+    <p>Fence with <code>```diagram</code>. Monospace is mandatory — box art collapses in any
+    proportional font.</p>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title"><span class="section-number">③</span><span class="st-text">Callouts</span></h2>
+
+    <aside class="callout is-mental"><span class="callout-icon">🧠</span>
+      <span class="callout-label">Mental Model</span>
+      <p>The analogy. Must survive being pushed on. Source: <code>:::mental</code></p></aside>
+
+    <aside class="callout is-trap"><span class="callout-icon">⚠️</span>
+      <span class="callout-label">Trap</span>
+      <p>Where the obvious answer is wrong. Dashed border. Source: <code>:::trap</code></p></aside>
+
+    <aside class="callout is-senior"><span class="callout-icon">🔥</span>
+      <span class="callout-label">Senior Tip</span>
+      <p>The operational detail you only learn by running it. Source: <code>:::senior</code></p></aside>
+
+    <aside class="callout is-failure"><span class="callout-icon">🚨</span>
+      <span class="callout-label">Production Failure</span>
+      <p>A real failure mode and its signature. Source: <code>:::failure</code></p></aside>
+
+    <aside class="callout is-key"><span class="callout-icon">💡</span>
+      <span class="callout-label">Key Takeaway</span>
+      <p>Amber, filled. Source: <code>:::key</code></p></aside>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title"><span class="section-number">④</span><span class="st-text">Boxes, lists, tables</span></h2>
+    <div class="grid-2 is-divided">
+      <div>
+        <div class="hand-box"><p>A plain hand-drawn box.</p></div>
+        <div class="hand-box is-green"><p>Green — the "good path" box.</p></div>
+        <div class="hand-box is-dashed"><p>Dashed — grouping or boundary.</p></div>
+      </div>
+      <div>
+        <ul class="checklist">
+          <li>Checklist item, green tick</li>
+          <li>Written as <code>- [x] item</code></li>
+        </ul>
+        <ul>
+          <li>Plain bullet, red marker</li>
+          <li>Kept to one line where possible</li>
+        </ul>
+      </div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>value</code></td><td>Tables carry the comparisons; prose carries the reasoning.</td></tr>
+        <tr><td><code>value</code></td><td>Every table should answer one question.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title"><span class="section-number">★</span><span class="st-text">The cloud</span></h2>
+    <div class="cloud">
+      <p>Reserved for the closing takeaway of a note — one per note, never more.
+      Source: <code>:::cloud</code></p>
+    </div>
+  </section>
+
+  <div class="note-footer"><span>Level 1 · reference · stable</span><span>site/styleguide.html</span></div>
+</main>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# Generated output — rebuilt by `node site/build.mjs` on every deploy.
+# Never commit it: it would conflict on every push and doubles the repo size.
+site/dist/
+
+# Dependencies (there are none today, but keep this in case that changes)
+node_modules/
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Secrets — never commit these. The password hash lives on the server only.
+deploy/Caddyfile.local
+*.htpasswd

@@ -1,0 +1,63 @@
+# Gendi Notes — Caddy site config
+# ----------------------------------------------------------------------------
+# Install to /etc/caddy/Caddyfile on the server, then: sudo systemctl reload caddy
+#
+# Caddy handles Let's Encrypt certificates automatically — there is no certbot
+# step and no renewal cron. It needs two things to succeed:
+#   1. The DNS A record for this domain must already point at this server.
+#   2. Ports 80 AND 443 must be reachable from the internet (80 is used for
+#      the ACME challenge and the HTTP->HTTPS redirect).
+# ----------------------------------------------------------------------------
+
+# CHANGE THIS to your domain.
+notes.example.com {
+
+	root * /var/www/gendi-notes
+	file_server
+
+	# ---- password protection -------------------------------------------------
+	# Generate the hash ON THE SERVER with:
+	#     caddy hash-password
+	# It prompts for the password, so it never lands in your shell history.
+	# Paste the output (starts with $2a$) below, replacing the placeholder.
+	#
+	# NOTE ON SYNTAX: this directive is `basic_auth` in Caddy 2.8+ and
+	# `basicauth` in 2.0-2.7. The old name still works as a deprecated alias,
+	# so `basicauth` is used here for compatibility with both. If your Caddy
+	# is 2.8+ and you want no deprecation warning, rename it to `basic_auth`.
+	basicauth {
+		gendi PASTE_YOUR_BCRYPT_HASH_HERE
+	}
+
+	# ---- compression ---------------------------------------------------------
+	# The notes are text; this cuts transfer size substantially.
+	encode zstd gzip
+
+	# ---- caching -------------------------------------------------------------
+	# The CSS filename never changes, so a long cache would serve stale styling
+	# after a redeploy. Keep HTML uncached and let the CSS revalidate.
+	@html path *.html /
+	header @html Cache-Control "no-cache"
+
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=3600, must-revalidate"
+
+	# ---- security headers ----------------------------------------------------
+	header {
+		# The pages load webfonts from Google Fonts and nothing else. This CSP
+		# permits exactly that and blocks everything not needed, including
+		# any inline or external script (the notes need no JavaScript at all).
+		Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; script-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/gendi-notes.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

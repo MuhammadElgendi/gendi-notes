@@ -1,0 +1,570 @@
+/* ============================================================================
+   GENDI NOTES — HANDWRITTEN NOTEBOOK DESIGN SYSTEM
+   ----------------------------------------------------------------------------
+   One stylesheet drives every note. Never style a note individually.
+   Compose pages from the documented classes below.
+
+   FONTS (all SIL Open Font License 1.1 — free for any use, redistributable):
+     Caveat          — titles / headings      https://fonts.google.com/specimen/Caveat
+     Patrick Hand    — body handwriting       https://fonts.google.com/specimen/Patrick+Hand
+     (diagrams use the local monospace stack — see --font-mono, no webfont)
+   Loaded from Google Fonts by default; see site/README.md for vendoring them
+   locally for offline / air-gapped use. Every stack has a system fallback, so
+   the notes stay readable with zero network access.
+
+   BASELINE GRID
+     --rule is the notebook line height. Body line-height == --rule, and the
+     ruled-paper gradient uses the same period, so text sits ON the lines.
+     Keep vertical margins in multiples of --rule (or half) to stay aligned.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- 1. TOKENS */
+:root {
+  /* — paper — */
+  --paper:        #f6f1e3;
+  --paper-edge:   #efe8d6;
+  --rule-color:   #dcd4be;
+  --margin-line:  #d8a9a2;
+
+  /* — ink — */
+  --ink:          #24406f;   /* primary handwriting  */
+  --ink-strong:   #1b3160;   /* headings             */
+  --ink-soft:     #5a6f96;   /* secondary / captions */
+  --ink-pencil:   #7b8296;   /* de-emphasised notes  */
+
+  /* — accents — */
+  --red:          #b8342a;   /* emphasis + title underline. USE SPARINGLY. */
+  --red-soft:     #d9736a;
+  --green:        #4f8f3f;   /* checks, "good" boxes */
+  --green-fill:   #e7f1de;
+  --green-line:   #86ac74;
+  --amber:        #b8862a;
+  --amber-fill:   #f7efdc;
+  --violet:       #6b4f9e;
+
+  /* — geometry — */
+  --rule:         30px;      /* the baseline grid                 */
+  --page-w:       clamp(320px, 96vw, 1180px);
+  --pen:          2.1px;     /* nominal pen stroke width          */
+  --pen-fine:     1.5px;
+
+  /* — type — */
+  --font-title: "Caveat", "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+  --font-hand:  "Patrick Hand", "Segoe Print", "Comic Sans MS", ui-rounded, cursive;
+  /* Diagrams are box-drawing art (U+2500 block). A webfont that lacks those
+     glyphs makes the browser substitute them from a fallback with different
+     metrics, and every box visibly breaks apart. Local monospace fonts have
+     complete, correctly-metricked coverage — so diagrams deliberately use NO
+     webfont. Do not add one here. */
+  --font-mono:  ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas,
+                "DejaVu Sans Mono", "Liberation Mono", Menlo, "Courier New", monospace;
+
+  --fs-body:    18.5px;
+  --fs-small:   15.5px;
+  --fs-mono:    13.5px;
+
+  /* hand-drawn corner radii: deliberately asymmetric so no two corners match */
+  --r-box:  10px 16px 9px 14px / 14px 9px 16px 10px;
+  --r-box2: 15px 9px 14px 11px / 9px 15px 10px 16px;
+  --r-pill: 40% 60% 55% 45% / 55% 45% 60% 40%;
+}
+
+/* Night paper. Notes are read at 1am too. Same ink relationships, inverted. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #1c1f26;
+    --paper-edge: #171a20;
+    --rule-color: #2b3039;
+    --margin-line:#5a3b39;
+    --ink:        #c3d4f2;
+    --ink-strong: #dbe6fb;
+    --ink-soft:   #8fa3c8;
+    --ink-pencil: #79839a;
+    --red:        #f0857a;
+    --red-soft:   #c96a61;
+    --green:      #8fd07a;
+    --green-fill: #223026;
+    --green-line: #4e7a44;
+    --amber:      #e0b45e;
+    --amber-fill: #322a1b;
+    --violet:     #b49ae0;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:#1c1f26; --paper-edge:#171a20; --rule-color:#2b3039; --margin-line:#5a3b39;
+  --ink:#c3d4f2; --ink-strong:#dbe6fb; --ink-soft:#8fa3c8; --ink-pencil:#79839a;
+  --red:#f0857a; --red-soft:#c96a61; --green:#8fd07a; --green-fill:#223026;
+  --green-line:#4e7a44; --amber:#e0b45e; --amber-fill:#322a1b; --violet:#b49ae0;
+}
+
+/* ------------------------------------------------------------- 2. THE PAGE */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper-edge);
+  color: var(--ink);
+  font-family: var(--font-hand);
+  font-size: var(--fs-body);
+  line-height: var(--rule);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* .note-page — the sheet of paper. Wrap every note in exactly one. */
+.note-page {
+  width: var(--page-w);
+  margin: 26px auto 64px;
+  padding: calc(var(--rule) * 1.5) 40px calc(var(--rule) * 2) 58px;
+  position: relative;
+  background-color: var(--paper);
+  /* ruled lines, locked to the baseline grid */
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(var(--rule) - 1px),
+      var(--rule-color) calc(var(--rule) - 1px) var(--rule)
+    );
+  background-position: 0 calc(var(--rule) * 1.5);
+  border-radius: 3px 6px 4px 5px;
+  box-shadow:
+    0 1px 2px rgba(40,30,10,.10),
+    0 10px 30px rgba(40,30,10,.10);
+}
+
+/* red vertical margin line, like a real notebook */
+.note-page::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 42px;
+  width: var(--pen-fine);
+  background: var(--margin-line);
+  opacity: .65;
+}
+
+/* subtle paper grain — pure SVG noise, no image asset needed */
+.note-page::after {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: .30;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: dark) { .note-page::after { mix-blend-mode: screen; opacity: .12; } }
+
+/* ------------------------------------------------------- 3. PAGE FURNITURE */
+/* .note-meta — the hashtag row + date, like the top of the reference sheet */
+.note-meta {
+  display: flex; flex-wrap: wrap; gap: 10px 18px;
+  align-items: baseline; justify-content: space-between;
+  font-size: var(--fs-small);
+  margin-bottom: calc(var(--rule) * .5);
+}
+.note-tags { color: var(--ink-soft); }
+.note-tags .tag { white-space: nowrap; }
+.note-tags .tag::before { content: "#"; opacity: .7; }
+.note-date {
+  color: var(--ink-strong);
+  border-bottom: var(--pen) solid var(--red);
+  padding-bottom: 2px;
+}
+
+/* .note-title — big handwritten title with the thick red underline */
+.note-title {
+  font-family: var(--font-title);
+  font-size: clamp(34px, 5.4vw, 54px);
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--ink-strong);
+  text-align: center;
+  margin: calc(var(--rule) * .5) 0 6px;
+  text-transform: uppercase;
+}
+.note-title .star { color: var(--amber); }
+
+/* the red rule under the title — drawn wavy, not straight */
+.title-underline {
+  display: block;
+  width: min(78%, 640px);
+  height: 9px;
+  margin: 0 auto calc(var(--rule) * .6);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='9' viewBox='0 0 240 9'%3E%3Cpath d='M2 5.4c30-3.1 54 2 84-.6s54-3.3 84-.9 40 2.4 68 .2' fill='none' stroke='%23b8342a' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 240px 9px;
+}
+
+/* .note-subtitle — the one-sentence mental model, in quotes */
+.note-subtitle {
+  text-align: center;
+  color: var(--ink);
+  font-size: clamp(17px, 2.2vw, 21px);
+  margin: 0 auto calc(var(--rule) * .75);
+  max-width: 62ch;
+}
+.note-subtitle::before { content: "\201C"; }
+.note-subtitle::after  { content: "\201D"; }
+
+/* --------------------------------------------------------- 4. HAND-DRAWING */
+/* Shared wobble: an asymmetric radius + a whisper of rotation reads as
+   "drawn by a person" and survives printing, unlike SVG displacement filters. */
+.hand-box,
+.callout,
+.diagram,
+.hand-note {
+  position: relative;
+}
+.hand-box::before,
+.callout::before,
+.diagram::before,
+.hand-note::before {
+  content: "";
+  position: absolute; inset: 0;
+  border: var(--pen) solid currentColor;
+  border-radius: var(--r-box);
+  pointer-events: none;
+}
+/* alternate the radius so adjacent boxes never look stamped from one mould */
+.hand-box:nth-of-type(even)::before,
+.callout:nth-of-type(even)::before { border-radius: var(--r-box2); }
+
+/* .hand-box — the general drawn rectangle */
+.hand-box {
+  color: var(--ink);
+  padding: calc(var(--rule) * .5) 18px;
+  margin: calc(var(--rule) * .5) 0;
+}
+.hand-box > :first-child { margin-top: 0; }
+.hand-box > :last-child  { margin-bottom: 0; }
+
+/* variants */
+.hand-box.is-green  { color: var(--green-line); background: var(--green-fill); }
+.hand-box.is-green  > * { color: var(--ink); }
+.hand-box.is-red    { color: var(--red); }
+.hand-box.is-dashed::before { border-style: dashed; }
+.hand-box.is-tight  { padding: 6px 12px; margin: 6px 0; display: inline-block; }
+
+/* .hand-underline — wavy hand-drawn underline for inline text */
+.hand-underline {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='7' viewBox='0 0 120 7'%3E%3Cpath d='M1 4.2c14-2.4 26 1.6 40-.4s26-2.6 40-.7 26 1.9 39 .2' fill='none' stroke='%23b8342a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: 0 100%;
+  background-size: 120px 7px;
+  padding-bottom: 5px;
+}
+.hand-underline.is-blue {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='7' viewBox='0 0 120 7'%3E%3Cpath d='M1 4.2c14-2.4 26 1.6 40-.4s26-2.6 40-.7 26 1.9 39 .2' fill='none' stroke='%2324406f' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+/* --------------------------------------------------------- 5. SECTIONS ①②③ */
+.section { margin: calc(var(--rule) * .9) 0 calc(var(--rule) * .5); break-inside: avoid; }
+
+.section-title {
+  font-family: var(--font-title);
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--ink-strong);
+  display: flex; align-items: center; gap: 11px;
+  margin: 0 0 calc(var(--rule) * .4);
+  line-height: 1.2;
+}
+/* the underline hugs the words only, not the full column */
+.section-title > .st-text {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='7' viewBox='0 0 120 7'%3E%3Cpath d='M1 4.2c14-2.4 26 1.6 40-.4s26-2.6 40-.7 26 1.9 39 .2' fill='none' stroke='%2324406f' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: 0 100%;
+  background-size: 120px 7px;
+  padding-bottom: 4px;
+}
+
+/* .section-number — the circled ① ② ③ */
+.section-number {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  font-family: var(--font-hand);
+  font-size: 17px;
+  color: var(--ink-strong);
+  border: var(--pen) solid var(--ink-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  transform: rotate(-1.5deg);
+}
+.section:nth-of-type(even) .section-number { transform: rotate(1.5deg); }
+
+/* h3 inside a section */
+.note-page h3 {
+  font-family: var(--font-title);
+  font-size: 22px; font-weight: 700;
+  color: var(--ink-strong);
+  margin: calc(var(--rule) * .5) 0 4px;
+  line-height: 1.25;
+}
+.note-page h4 {
+  font-family: var(--font-hand);
+  font-size: 18px; font-weight: 400;
+  color: var(--ink-strong);
+  margin: calc(var(--rule) * .4) 0 2px;
+  text-decoration: underline;
+  text-decoration-color: var(--red-soft);
+  text-underline-offset: 4px;
+}
+
+/* ------------------------------------------------------------ 6. TEXT FLOW */
+.note-page p { margin: 0 0 calc(var(--rule) * .5); max-width: 74ch; }
+.note-page strong { color: var(--ink-strong); font-weight: 700; }
+.note-page em { font-style: italic; color: var(--ink-soft); }
+
+/* ==red emphasis== — reserved for terms of art, never whole sentences */
+.hl-red { color: var(--red); }
+.hl-green { color: var(--green); }
+
+.note-page ul, .note-page ol { margin: 0 0 calc(var(--rule) * .5); padding-left: 26px; }
+.note-page li { margin: 0 0 2px; }
+.note-page ul { list-style: none; padding-left: 22px; }
+.note-page ul > li::before {
+  content: "\2022";
+  color: var(--red-soft);
+  display: inline-block;
+  width: 18px; margin-left: -18px;
+  font-weight: 700;
+}
+/* checklist list: "- [x] item" renders with a hand-drawn green tick */
+.note-page ul.checklist { padding-left: 26px; }
+.note-page ul.checklist > li::before {
+  content: "\2611"; color: var(--green); font-size: 19px;
+  width: 22px; margin-left: -22px;
+}
+
+.note-page a { color: var(--ink-strong); text-decoration-color: var(--red-soft); text-underline-offset: 3px; }
+.note-page a:hover { color: var(--red); }
+
+.note-page hr {
+  border: 0; height: 7px; margin: var(--rule) 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='7' viewBox='0 0 120 7'%3E%3Cpath d='M1 4.2c14-2.4 26 1.6 40-.4s26-2.6 40-.7 26 1.9 39 .2' fill='none' stroke='%23dcd4be' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x; background-size: 120px 7px;
+}
+
+/* inline code — kept subtle so it doesn't fight the handwriting */
+.note-page :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  color: var(--ink-strong);
+  background: rgba(36,64,111,.07);
+  border-radius: 4px 6px 5px 7px;
+  padding: 1px 5px;
+}
+@media (prefers-color-scheme: dark) { .note-page :not(pre) > code { background: rgba(195,212,242,.10); } }
+
+/* ------------------------------------------------------------- 7. DIAGRAMS */
+/* .diagram — ASCII/box-art. MUST be monospace or the alignment collapses. */
+.diagram {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  line-height: 1.45;
+  color: var(--ink-strong);
+  white-space: pre;
+  overflow-x: auto;
+  padding: 16px 20px;
+  margin: calc(var(--rule) * .5) 0;
+  tab-size: 4;
+}
+.diagram::before { border-style: solid; opacity: .55; }
+.diagram .caption {
+  display: block; font-family: var(--font-hand);
+  font-size: var(--fs-small); color: var(--ink-soft);
+  white-space: normal; margin-top: 8px;
+}
+
+/* code blocks (real commands, not diagrams) */
+.note-page pre {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  line-height: 1.5;
+  color: var(--ink-strong);
+  background: rgba(36,64,111,.055);
+  border-left: 3px solid var(--ink-soft);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 16px;
+  margin: calc(var(--rule) * .4) 0;
+  overflow-x: auto;
+}
+@media (prefers-color-scheme: dark) { .note-page pre { background: rgba(195,212,242,.07); } }
+.note-page pre code { font: inherit; color: inherit; background: none; padding: 0; }
+
+/* --------------------------------------------------------- 8. HAND ARROWS */
+.arrow { color: var(--ink-soft); font-size: 20px; line-height: 1; }
+.arrow-down {
+  display: block; text-align: center;
+  color: var(--ink-soft); font-size: 22px;
+  margin: 2px 0; line-height: 1;
+}
+.arrow-down::before { content: "\2193"; }
+
+/* --------------------------------------------------------- 9. CALLOUT BOXES */
+.callout {
+  padding: calc(var(--rule) * .45) 18px calc(var(--rule) * .45) 46px;
+  margin: calc(var(--rule) * .6) 0;
+  break-inside: avoid;
+  color: var(--ink-soft);
+}
+.callout > * { color: var(--ink); }
+.callout > :first-child { margin-top: 0; }
+.callout > :last-child  { margin-bottom: 0; }
+.callout .callout-label {
+  display: block;
+  font-family: var(--font-title);
+  font-size: 20px; font-weight: 700;
+  letter-spacing: .5px; text-transform: uppercase;
+  margin-bottom: 2px;
+}
+/* the emoji marker sits in the left gutter */
+.callout .callout-icon {
+  position: absolute; left: 12px; top: calc(var(--rule) * .40);
+  font-size: 21px; line-height: 1;
+}
+
+.callout.is-key      { color: var(--amber);  background: var(--amber-fill); }
+.callout.is-key      .callout-label { color: var(--amber); }
+.callout.is-trap     { color: var(--red);    }
+.callout.is-trap     .callout-label { color: var(--red); }
+.callout.is-trap::before { border-style: dashed; }
+.callout.is-senior   { color: var(--violet); }
+.callout.is-senior   .callout-label { color: var(--violet); }
+.callout.is-mental   { color: var(--green-line); background: var(--green-fill); }
+.callout.is-mental   .callout-label { color: var(--green); }
+.callout.is-failure  { color: var(--red); background: rgba(184,52,42,.055); }
+.callout.is-failure  .callout-label { color: var(--red); }
+.callout.is-failure::before { border-width: 2.6px; }
+.callout.is-interview{ color: var(--ink-soft); }
+.callout.is-interview .callout-label { color: var(--ink-strong); }
+
+/* .cloud — the hand-drawn cloud around a key takeaway (as in the reference) */
+.cloud {
+  position: relative;
+  padding: calc(var(--rule) * .8) 42px;
+  margin: calc(var(--rule) * .6) auto;
+  max-width: 62ch;
+  color: var(--ink);
+}
+.cloud::before {
+  content: "";
+  position: absolute; inset: -6px -10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 130' preserveAspectRatio='none'%3E%3Cpath d='M32 96c-18-4-24-22-13-34-9-14 3-31 20-29 3-16 24-22 36-12 8-15 31-16 41-3 11-13 33-10 41 4 14-7 31 3 31 18 16 1 25 18 17 31 9 11 2 28-13 30-6 12-24 15-34 6-10 12-30 12-40 0-11 11-30 9-38-4-12 8-30 3-34-10-4 2-9 3-14 3z' fill='none' stroke='%2324406f' stroke-width='2.1' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .cloud::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 130' preserveAspectRatio='none'%3E%3Cpath d='M32 96c-18-4-24-22-13-34-9-14 3-31 20-29 3-16 24-22 36-12 8-15 31-16 41-3 11-13 33-10 41 4 14-7 31 3 31 18 16 1 25 18 17 31 9 11 2 28-13 30-6 12-24 15-34 6-10 12-30 12-40 0-11 11-30 9-38-4-12 8-30 3-34-10-4 2-9 3-14 3z' fill='none' stroke='%23c3d4f2' stroke-width='2.1' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}
+
+/* ------------------------------------------------------------- 10. TABLES */
+.note-page table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: calc(var(--rule) * .5) 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+.note-page th, .note-page td {
+  border: var(--pen-fine) solid var(--ink-soft);
+  padding: 7px 11px;
+  text-align: left;
+  vertical-align: top;
+}
+.note-page th {
+  font-family: var(--font-title);
+  font-size: 18px; font-weight: 700;
+  color: var(--ink-strong);
+  background: rgba(36,64,111,.06);
+}
+@media (prefers-color-scheme: dark) { .note-page th { background: rgba(195,212,242,.08); } }
+.note-page table code { font-size: 12.5px; }
+.table-wrap { overflow-x: auto; }
+
+/* -------------------------------------------------------------- 11. LAYOUT */
+/* the reference sheet is two columns — .grid-2 reproduces it and collapses */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 26px; }
+@media (max-width: 880px) { .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 0; } }
+.col-span { grid-column: 1 / -1; }
+
+/* a vertical hand-drawn divider between columns */
+.grid-2.is-divided { position: relative; }
+.grid-2.is-divided::after {
+  content: ""; position: absolute;
+  left: 50%; top: 6px; bottom: 6px;
+  width: var(--pen-fine); background: var(--rule-color);
+}
+@media (max-width: 880px) { .grid-2.is-divided::after { display: none; } }
+
+/* ----------------------------------------------------- 12. FOOTER / SIGNOFF */
+.note-footer {
+  margin-top: calc(var(--rule) * 1.2);
+  padding-top: calc(var(--rule) * .5);
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: space-between;
+}
+
+/* .related — the knowledge-graph strip at the bottom of every note */
+.related { margin-top: calc(var(--rule) * .5); }
+.related .chain { font-size: var(--fs-small); color: var(--ink-soft); }
+.related .chain a { white-space: nowrap; }
+
+/* -------------------------------------------------------------- 13. INDEX */
+.level-badge {
+  display: inline-block; font-size: 13px; padding: 0 8px;
+  border: var(--pen-fine) solid currentColor; border-radius: var(--r-pill);
+  vertical-align: middle;
+}
+.lvl-1 { color: var(--green); }
+.lvl-2 { color: var(--ink-soft); }
+.lvl-3 { color: var(--amber); }
+.lvl-4 { color: var(--red); }
+.lvl-5 { color: var(--violet); }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 18px; }
+.card { padding: 12px 16px; }
+.card h3 { margin: 0 0 2px; }
+.card p { font-size: var(--fs-small); color: var(--ink-soft); margin: 0; line-height: 1.45; }
+
+/* --------------------------------------------------------------- 14. PRINT */
+@media print {
+  :root { --paper: #fff; --rule-color: #e6e0d0; }
+  body { background: #fff; font-size: 11.5pt; }
+  .note-page {
+    width: auto; margin: 0; padding: 0 8mm 0 12mm;
+    box-shadow: none; border-radius: 0; background-image: none;
+  }
+  .note-page::after, .note-page::before { display: none; }
+  .section, .callout, .diagram, .hand-box, table { break-inside: avoid; }
+  .note-title { font-size: 26pt; }
+  a { color: inherit; text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 8pt; color: #666; }
+  .no-print { display: none !important; }
+}
+
+/* ------------------------------------------------------- 15. ACCESSIBILITY */
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+.skip-link {
+  position: absolute; left: -9999px;
+  background: var(--paper); color: var(--ink-strong); padding: 8px 14px; z-index: 10;
+}
+.skip-link:focus { left: 12px; top: 12px; }
+:focus-visible { outline: 2.5px solid var(--red); outline-offset: 3px; border-radius: 3px; }
+
+/* Handwriting fonts are lower-contrast than system fonts. Readers who need
+   plainer type can flip this on; every other rule stays identical. */
+:root[data-font="plain"] {
+  --font-title: system-ui, "Segoe UI", sans-serif;
+  --font-hand:  system-ui, "Segoe UI", sans-serif;
+  --fs-body: 16.5px;
+}
