@@ -4,12 +4,14 @@ slug: ssh
 type: guide
 domain: 00-foundations
 tags: [ssh, linux, security]
-keywords: [ssh keys, public key, private key, authorized_keys, ssh config, tunnel, port forward, agent, scp]
+keywords: [ssh keys, public key, private key, authorized_keys, ssh config,
+           tunnel, port forward, agent, scp, rsync, proxyjump, bastion,
+           known_hosts, ed25519, اس اس اتش, مفتاح, سيرفر, نفق]
 level: 1
 status: stable
 prerequisites: [networking-basics]
-related: [linux-basics, git]
-updated: 2026-09-06
+related: [linux-basics, git, devops-interview-questions]
+updated: 2026-09-08
 ---
 
 # SSH
@@ -44,6 +46,50 @@ There are two ways in, and only one of them is acceptable on a server.
 
 The private key never travels. That is the whole point — nothing worth stealing
 crosses the network.
+
+:::ar بالمصري · الـ key pair دي إزاي بتشتغل؟
+فيه طريقتين تدخل بيهم سيرفر، وواحدة بس منهم مقبولة.
+
+**الباسورد:** إنت بتكتب سر وبيمشي على الشبكة. ده ممكن يتخمّن، وممكن حد
+يقعد يجرّب فيه، وبتشاركه مع ناس، وبتستخدمه في أكتر من مكان.
+
+**المفتاحين (key pair):** وده الصح، والفكرة عبقرية وبسيطة.
+
+عندك **مفتاحين**، بيتعملوا مع بعض ومربوطين رياضياً:
+
+| المفتاح | فين | تعمل بيه إيه |
+|:---|:---|:---|
+| **الخاص** (private) | على **جهازك** بس | **عمرك ما تشاركه مع حد** |
+| **العام** (public) | على **السيرفر** | ده مفيش مشكلة تنشره في الشارع |
+
+**والحوار اللي بيحصل:**
+
+```diagram
+   إنت                                    السيرفر
+    │                                        │
+    │ ── "أنا عايز أدخل" ──────────────────→ │
+    │                                        │
+    │ ←── "طيب، امضي على الرسالة دي" ──────── │  (تحدّي عشوائي)
+    │                                        │
+    │  تمضيها بالمفتاح الخاص                  │
+    │ ── الإمضاء ──────────────────────────→ │
+    │                                        │  يتأكد من الإمضاء
+    │                                        │  بالمفتاح العام
+    │ ←── "اتفضل" ─────────────────────────── │
+    │                                        │
+    └── والمفتاح الخاص **عمره ما مشي على الشبكة** ────┘
+```
+
+**وهي دي كل الحكاية:** المفتاح الخاص **عمره ما بيسافر**. فلو حد قاعد
+بيتنصّت على الشبكة كلها، **مش هياخد حاجة تنفعه**. هو شاف إمضاء على رسالة
+عشوائية مش هتتكرر تاني.
+
+بينما الباسورد **بيمشي**، فأي حد في النص يقدر ياخده ويستخدمه.
+
+**فكّر فيها كده:** المفتاح العام زي **قفل** بتوزّعه على السيرفرات. والمفتاح
+الخاص هو **المفتاح** اللي في جيبك. توزيع أقفال مش مشكلة. المفتاح اللي في
+جيبك ده اللي متسيبهوش.
+:::
 
 ## What it is made of
 
@@ -122,6 +168,72 @@ ordering problem. `IdentitiesOnly yes` with an explicit `IdentityFile` sends
 exactly one key and removes the whole class of failure.
 :::
 
+:::ar بالمصري · ملف `~/.ssh/config` — اعمله من أول يوم
+ده الفرق بين إنك تحفظ أوامر طويلة، وإنك تكتب كلمة واحدة.
+
+**من غيره:**
+```sh
+ssh -i ~/.ssh/prod_key ubuntu@203.0.113.10
+```
+
+**ومعاه:**
+```sh
+ssh prod
+```
+
+الملف بسيط، اعمله في `~/.ssh/config`:
+
+```text
+Host prod
+    HostName 203.0.113.10
+    User ubuntu
+    IdentityFile ~/.ssh/prod_key
+    IdentitiesOnly yes
+    ServerAliveInterval 60
+```
+
+| السطر | بيعمل إيه |
+|:---|:---|
+| `Host prod` | الاسم المختصر اللي هتكتبه |
+| `HostName` | العنوان الحقيقي |
+| `User` | اسم اليوزر، عشان متكتبوش كل مرة |
+| `IdentityFile` | أنهي مفتاح |
+| `IdentitiesOnly yes` | **اقرأ التحذير تحت، ده مهم** |
+| `ServerAliveInterval 60` | يمنع الاتصال إنه يقطع لو سكت شوية |
+
+**وأحلى حاجة:** `scp file prod:/tmp/` بتشتغل كمان لوحدها.
+
+:::danger `IdentitiesOnly yes` هو حل `Permission denied (publickey)`
+دي مشكلة بتضيّع وقت رهيب، والسبب مش اللي إنت فاكره.
+
+SSH افتراضياً **بيعرض كل مفتاح لاقيه في `~/.ssh`**، واحد ورا التاني.
+
+والسيرفرات عادةً بتسمح بـ **٦ محاولات** بس. فلو المفتاح الصح رقم ٧ في
+الترتيب، السيرفر **بيرفضك** — **رغم إن المفتاح صح ١٠٠٪ وموجود في
+`authorized_keys`**.
+
+```diagram
+   عندك ٨ مفاتيح في ~/.ssh
+        │
+   SSH يعرض: مفتاح ١ ✘  ٢ ✘  ٣ ✘  ٤ ✘  ٥ ✘  ٦ ✘
+        │
+        ↓
+   السيرفر: "خلصت المحاولات" → Permission denied (publickey)
+        │
+        └── والمفتاح الصح كان رقم ٧، وعمره ما اتعرض!
+```
+
+**والرسالة بتقول "publickey" فبتفتكر إن المفتاح غلط.** وهي مش مشكلة
+مفتاح غلط — **دي مشكلة ترتيب**.
+
+و `IdentitiesOnly yes` مع `IdentityFile` محدد بتخلي SSH يبعت **مفتاح
+واحد بالظبط**، فالمشكلة دي بتختفي من جذورها.
+
+**وعشان تتأكد بنفسك:** شغّل `ssh -v prod` وبصّ على سطور
+`Offering public key:` — هتشوف بعينك المفاتيح اللي بيعرضها بالترتيب.
+:::
+:::
+
 ### 4. Permissions matter, and SSH enforces them
 
 ```sh
@@ -167,6 +279,59 @@ ssh -J bastion final-host        # or ProxyJump in ~/.ssh/config
 ```
 :::
 
+:::ar بالمصري · الـ agent، و ليه `-A` خطر
+**الـ agent** برنامج صغير شغّال في جلستك، بيمسك مفاتيحك **مفتوحة** عشان
+متكتبش الـ passphrase كل مرة.
+
+```sh
+ssh-add ~/.ssh/id_ed25519    # افتح المفتاح، واكتب الـ passphrase مرة واحدة
+ssh-add -l                   # وريني المفاتيح المفتوحة
+```
+
+:::danger و `ssh -A` (agent forwarding) بتسلّم مفاتيحك للسيرفر
+الناس بتستخدم `-A` عشان تعمل `git clone` من على السيرفر بمفاتيحها. ومنطقي.
+**بس خد بالك من التكلفة.**
+
+لما تعمل `ssh -A prod`، إنت بتفتح قناة بين السيرفر وبين الـ agent بتاعك.
+
+**ومعناها إن أي حد معاه root على السيرفر ده يقدر — وإنت متصل — يستخدم
+الـ agent بتاعك ويثبت إنه إنت لأي حاجة مفاتيحك بتفتحها.**
+
+هو مش هياخد المفتاح نفسه (المفتاح لسه على جهازك)، بس هو **مش محتاج ياخده**
+— هو بيقدر يطلب منك تمضي أي حاجة هو عايزها، وإنت مش هتعرف.
+
+```diagram
+   إنت ── ssh -A ──→ prod (فيه حد root عليه)
+    │                  │
+    │                  └── يستخدم الـ agent بتاعك
+    │                       │
+    │                       ↓
+    │                  يدخل على GitHub بتاعك
+    │                  يدخل على سيرفرات تانية مفاتيحك بتفتحها
+    │
+    └── والـ agent بتاعك بيمضي كل حاجة، لأنه مش عارف يفرّق
+```
+
+**البديل الصح: `ProxyJump`.** دي **بتنقّل الاتصال** من خلال السيرفر بدل
+إنها **تسلّفه** مفاتيحك:
+
+```sh
+ssh -J bastion final-host
+```
+
+أو في `~/.ssh/config`:
+```text
+Host db-private
+    HostName 10.0.1.50
+    ProxyJump prod
+```
+
+**الفرق:** مع `ProxyJump` الـ bastion بيبقى **ماسورة بس**، والتشفير
+بينك وبين الهدف النهائي مباشرة. الـ bastion **مش شايف** أي حاجة ومش
+ماسك أي حاجة.
+:::
+:::
+
 ## Copying files
 
 ```sh
@@ -207,6 +372,46 @@ ssh -D 1080 prod
 
 This is the safe way to reach a private database: nothing new is exposed, and
 the connection is encrypted and authenticated by SSH.
+
+:::ar
+الـ tunnel ده أنفع حاجة في SSH وأقل حاجة الناس بتستخدمها.
+
+**السيناريو:** عندك داتابيز في شبكة خاصة، ومش مكشوفة على الإنترنت (وده
+صح!). وإنت عايز توصلها بأداة على جهازك (DBeaver، pgAdmin، TablePlus).
+
+**الحل:**
+
+```sh
+ssh -L 5432:10.0.1.50:5432 prod
+```
+
+اقرا الأمر ده كده: **«خُد بورت ٥٤٣٢ على جهازي، وودّيه على
+`10.0.1.50:5432` من وجهة نظر السيرفر `prod`»**.
+
+```diagram
+   جهازك                          prod              الداتابيز الخاصة
+   ─────                          ────              ────────────────
+   localhost:5432 ══ نفق SSH ══→   │  ─────────────→ 10.0.1.50:5432
+        │                          │
+        │                     (بيشوف الشبكة
+   pgAdmin بيتصل                    الخاصة)
+   على localhost
+```
+
+وبعدها إنت بتوصل الأداة بتاعتك على `localhost:5432` عادي، وكأن الداتابيز
+على جهازك.
+
+**والترتيب في الأمر:** `-L <بورت عندك>:<العنوان من وجهة نظر السيرفر>:<بورته>`.
+
+**وليه دي الطريقة الآمنة؟**
+
+1. **مفيش أي حاجة جديدة اتكشفت** على الإنترنت. الداتابيز لسه مقفولة.
+2. **الاتصال مشفّر** ومتحقّق منه بـ SSH.
+3. **بيقفل لوحده** لما تقفل الـ SSH. مفيش حاجة بتفضل مفتوحة بالغلط.
+
+وفيه نوع تاني مفيد: `ssh -D 1080 prod` بيعملك **SOCKS proxy**، فتقدر
+تظبّط البراوزر عليه وتتصفّح المواقع الداخلية بتاعة الشركة كأنك جوه الشبكة.
+:::
 
 ## Common problems
 
@@ -249,6 +454,213 @@ while the first one is still connected. If the new session fails, you still have
 the old one to fix it with.
 :::
 
+:::ar
+**أهم سطرين تحطهم في `/etc/ssh/sshd_config`:**
+
+```text
+PasswordAuthentication no      # مفاتيح بس. ده أكبر مكسب أمني بسطر واحد
+PermitRootLogin no             # ادخل كيوزر عادي، وبعدين sudo
+```
+
+السطر الأول لوحده **بيلغي كل هجمات تخمين الباسوردات**. ولو فتحت لوجز أي
+سيرفر على الإنترنت، هتلاقي آلاف محاولات دخول بباسوردات كل يوم. السطر ده
+بيخليهم كلهم بلا فايدة.
+
+:::danger اختبر الإعدادات، **وسيب جلستك مفتوحة**
+دي نصيحة ممكن تنقذك من سفرية للداتا سنتر.
+
+**غلطة واحدة في `sshd_config` تقدر تقفل عليك السيرفر للأبد** لو ده كان
+طريقك الوحيد ليه. وأنا بقصد للأبد فعلاً — مش هتقدر تدخل تصلّحها.
+
+**فالترتيب المقدّس:**
+
+```sh
+# ١. اختبر الإعدادات **قبل** ما تطبّقها
+sudo sshd -t
+#    لو فيها غلطة، هيقولك السطر بالظبط. صلّحها ومتكملش.
+
+# ٢. طبّق
+sudo systemctl reload sshd
+
+# ٣. **ومن تيرمينال تاني خالص**، جرّب تدخل
+ssh prod
+```
+
+**والنقطة الحرجة:** **متقفلش الجلسة الأولى**. سيبها مفتوحة لحد ما تتأكد إن
+الجلسة الجديدة شغالة.
+
+لو الجديدة فشلت، إنت لسه معاك القديمة تصلّح بيها. لو كنت قفلتها، خلاص.
+
+ودي بالمناسبة نفس المنطق في أي حاجة بتغيّر طريق وصولك: **افتح الباب
+الجديد قبل ما تقفل القديم.**
+:::
+:::
+
+## Interview corner · الأسئلة اللي بتتسأل
+
+:::q How does SSH key authentication work? Why is it better than a password?
+The key point is that **the private key never crosses the network.**
+
+The server holds your public key. On connection it sends a random challenge;
+you sign it with the private key; the server verifies the signature with the
+public key. An attacker watching the whole exchange sees a signature over a
+nonce that will never be reused.
+
+| | Password | Key pair |
+|:---|:---|:---|
+| Crosses the network | **Yes** (inside TLS, but it arrives) | **No** |
+| Brute-forceable | Yes | Not realistically |
+| Reused across systems | Usually | Each server holds only a public key |
+| Revoking one user | Change the shared secret | Delete one line from `authorized_keys` |
+
+:::key The follow-up worth pre-empting
+"Then why bother with a passphrase on the key?" Because the private key is a
+**file**. A passphrase encrypts it at rest, so a stolen laptop does not hand
+over every server. The `ssh-agent` then holds it unlocked so you type the
+passphrase once per session — you get both security and convenience.
+:::
+
+:::ar
+النقطة الجوهرية إن **المفتاح الخاص عمره ما بيمشي على الشبكة**.
+
+السيرفر شايل مفتاحك العام. وقت الاتصال بيبعتلك **تحدّي عشوائي**، إنت
+بتمضيه بالمفتاح الخاص، والسيرفر بيتحقق من الإمضاء بالمفتاح العام.
+
+فأي حد بيتنصّت على التبادل كله، شايف **إمضاء على رسالة عشوائية مش
+هتتكرر تاني** — ومفيش أي حاجة تنفعه.
+
+| | الباسورد | المفتاحين |
+|:---|:---|:---|
+| بيمشي على الشبكة | **أيوه** (مشفّر، بس بيوصل) | **لأ** |
+| ينفع يتخمّن | أيوه | مستحيل عملياً |
+| متكرر بين الأنظمة | غالباً | كل سيرفر شايل مفتاح عام بس |
+| تشيل يوزر واحد | تغيّر السر المشترك | تمسح سطر من `authorized_keys` |
+
+**والسؤال اللي بيجي بعده — جاوبه من نفسك:**
+
+«أمال ليه نحط passphrase على المفتاح؟»
+
+عشان المفتاح الخاص **ملف**. والـ passphrase **بتشفّره على الديسك**، فلو
+اللاب اتسرق، اللي خده مش هياخد معاه كل سيرفراتك.
+
+والـ `ssh-agent` بعد كده بيمسك المفتاح **مفتوح** فإنت بتكتب الـ passphrase
+**مرة واحدة في الجلسة** — فبتاخد الأمان والراحة مع بعض.
+:::
+:::
+
+:::q `Permission denied (publickey)` — but the key is definitely in `authorized_keys`. What now?
+Four causes, and they need different fixes. Start with `ssh -v`, which prints
+exactly which keys were offered and what the server did with each.
+
+| Cause | Tell | Fix |
+|:---|:---|:---|
+| **Too many keys offered** | `-v` shows 6 keys offered, then denial | `IdentitiesOnly yes` + explicit `IdentityFile` |
+| Permissions on the **server** | `sshd` logs "bad ownership or modes" | `chmod 700 ~/.ssh; chmod 600 ~/.ssh/authorized_keys` |
+| Permissions on **your** key | `Permissions 0644 are too open` | `chmod 600` |
+| Wrong **user** | You are trying `root@` on a host that forbids it | Use the right user; `PermitRootLogin no` is common |
+
+```sh
+ssh -v prod                          # which keys are offered, and rejected
+sudo tail -50 /var/log/auth.log      # on the SERVER — the real reason
+```
+
+:::key The one most people miss
+The server-side permission check. `sshd` **silently ignores**
+`authorized_keys` if the file or the home directory is group- or
+world-writable — it is protecting you from someone else having appended a key.
+The client just sees "publickey" denied, with no hint. Only the server's
+auth log says why, which is the real lesson: **when the client message is
+uninformative, read the server log.**
+:::
+
+:::ar
+أربع أسباب، وكل واحد له حل مختلف. ابدأ دايماً بـ `ssh -v` عشان هو بيوريك
+المفاتيح اللي اتعرضت والسيرفر عمل إيه بكل واحد.
+
+| السبب | تعرفه إزاي | الحل |
+|:---|:---|:---|
+| **مفاتيح كتير معروضة** | `-v` بيوري ٦ مفاتيح وبعدين رفض | `IdentitiesOnly yes` + `IdentityFile` |
+| صلاحيات على **السيرفر** | لوج `sshd` بيقول "bad ownership or modes" | `chmod 700 ~/.ssh` و `chmod 600 authorized_keys` |
+| صلاحيات **مفتاحك** | `Permissions 0644 are too open` | `chmod 600` |
+| **يوزر غلط** | بتحاول `root@` وهو ممنوع | استخدم اليوزر الصح |
+
+**والسبب اللي أغلب الناس بتفوّته: صلاحيات جهة السيرفر.**
+
+الـ `sshd` **بيتجاهل ملف `authorized_keys` في سكوت تام** لو الملف أو
+الـ home directory قابلين للكتابة من الجروب أو من أي حد.
+
+وهو بيعمل كده **عشان يحميك** — لأن لو حد تاني يقدر يكتب في الملف ده،
+يبقى يقدر يضيف مفتاحه هو ويدخل مكانك.
+
+والعميل عندك بيشوف "publickey denied" وبس، **من غير أي تلميح**. والسبب
+الحقيقي مكتوب في لوج السيرفر:
+
+```sh
+sudo tail -50 /var/log/auth.log
+```
+
+**والدرس الحقيقي من السؤال ده:** لما رسالة العميل تبقى فاضية من المعنى،
+**اقرا لوج السيرفر**. وده مبدأ عام في التشخيص كله، مش في SSH بس.
+:::
+:::
+
+:::q What is the security difference between `ssh -A` and `ssh -J`?
+`-A` (agent forwarding) **lends your credentials**. `-J` (ProxyJump)
+**tunnels the connection**. The difference is who can act as you.
+
+```diagram
+   ssh -A bastion              ssh -J bastion target
+   ──────────────              ─────────────────────
+   your agent is reachable     the bastion forwards
+   FROM the bastion            encrypted bytes only
+        │                            │
+        ↓                            ↓
+   root on the bastion can      the bastion cannot read
+   sign challenges AS YOU,      the session or use your
+   to anything your keys open   keys — end-to-end to target
+```
+
+With `-A`, anyone with root on the intermediate host can, while you are
+connected, use your agent to authenticate as you to GitHub, to other
+servers, to anything your keys open. They never obtain the key itself — they
+do not need it.
+
+With `-J`, the bastion is a pipe. The SSH session is negotiated end-to-end
+with the final host, so the bastion sees only ciphertext.
+
+**Use `ProxyJump`.** If you genuinely must forward an agent, scope it per
+host in `~/.ssh/config` (`ForwardAgent yes` under one `Host` block only) —
+never globally.
+
+:::ar
+الـ `-A` **بتسلّف صلاحياتك**. والـ `-J` **بتنقّل الاتصال**. والفرق هو:
+**مين يقدر يتصرّف باسمك.**
+
+مع `-A`، أي حد معاه root على السيرفر الوسيط يقدر — **وإنت متصل** —
+يستخدم الـ agent بتاعك ويثبت إنه إنت لـ GitHub، ولسيرفرات تانية، ولأي
+حاجة مفاتيحك بتفتحها.
+
+وهو **عمره ما هياخد المفتاح نفسه** — بس هو **مش محتاجه**. هو محتاج بس
+إنك تمضي، والـ agent بيمضي وهو مش عارف يفرّق.
+
+مع `-J`، الـ bastion **ماسورة**. جلسة SSH بتتفاوض من الأول للآخر مع
+الهدف النهائي، فالـ bastion **مش شايف غير كلام مشفّر**.
+
+**فاستخدم `ProxyJump`.**
+
+ولو مضطر فعلاً تعمل agent forwarding، **حدّده لسيرفر واحد بعينه** في
+`~/.ssh/config`:
+
+```text
+Host that-one-server
+    ForwardAgent yes      # لهنا بس، مش لكل حاجة
+```
+
+**وعمرك ما تحطها globally**، عشان كده معناها إنك بتسلّف مفاتيحك لكل
+سيرفر تدخله في حياتك.
+:::
+:::
+
 ## Key takeaways
 
 - **Keys, never passwords.** The private key never leaves your machine.
@@ -260,3 +672,19 @@ the old one to fix it with.
 - **`ssh -L`** to reach a private database safely.
 - **`ssh -v`** when authentication fails; it shows exactly which key was
   refused.
+
+:::ar بالمصري · الخلاصة
+1. **مفاتيح، مش باسوردات.** المفتاح الخاص عمره ما بيسيب جهازك.
+2. **`~/.ssh/config`** بيحوّل الأوامر الطويلة لـ `ssh prod`. **اعمله من
+   أول يوم**، مش بعدين.
+3. **`IdentitiesOnly yes`** بيحل أغلب أخطاء `Permission denied (publickey)`
+   — عشان المشكلة **ترتيب** مش مفتاح غلط.
+4. **`chmod 600`** على المفاتيح الخاصة. SSH بيرفض أي حاجة أوسع من كده.
+5. **عمرك ما تحط مفتاح في فولدر متزامن** (OneDrive، Dropbox، درايف).
+6. **`ProxyJump` مش agent forwarding** عشان توصل لسيرفر من خلال bastion.
+7. **`ssh -L`** عشان توصل داتابيز خاصة بأمان، من غير ما تكشف حاجة.
+8. **`ssh -v`** أول ما المصادقة تفشل — بيوريك المفتاح اللي اترفض بالظبط.
+   ولو مش كفاية، **اقرا لوج السيرفر** `/var/log/auth.log`.
+9. **بتغيّر `sshd_config`؟** `sshd -t` الأول، وسيب جلستك مفتوحة لحد ما
+   تتأكد إن جلسة جديدة بتشتغل.
+:::

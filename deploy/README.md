@@ -10,15 +10,15 @@ pipeline, no Node process running permanently.
 ```
 your machine                          server
 ────────────                          ──────
-git push production main  ──────────▶ repo.git (bare)
+git push production main  ──────────→ repo.git (bare)
                                           │ post-receive hook fires
-                                          ▼
+                                          ↓
                                       checkout → lint → build
                                           │
-                                          ▼
+                                          ↓
                                       rsync to /var/www/gendi-notes
                                           │
-                                      Caddy serves it ──▶ https://notes.you.com
+                                      Caddy serves it ──→ https://notes.you.com
                                       (auto HTTPS + basic auth)
 ```
 

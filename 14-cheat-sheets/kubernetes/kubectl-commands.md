@@ -4,12 +4,14 @@ slug: kubectl-commands
 type: cheat-sheet
 domain: 14-cheat-sheets
 tags: [kubernetes, kubectl, cheatsheet]
-keywords: [kubectl, commands, jsonpath, context, namespace, debug, port-forward]
+keywords: [kubectl, commands, jsonpath, context, namespace, debug, port-forward,
+           kubectx, kubens, events, rollout, describe,
+           كيوبكتل, اوامر, كوبرنيتيس, شيت شيت]
 level: 1
 status: stable
 prerequisites: [kubernetes-basics]
 related: [kubernetes-troubleshooting, linux-commands]
-updated: 2026-09-06
+updated: 2026-09-08
 ---
 
 # kubectl Cheat Sheet
@@ -28,6 +30,31 @@ updated: 2026-09-06
       ├─ "can I get inside it?"    → kubectl exec / debug
       └─ "can I reach it locally?" → kubectl port-forward
 ```
+
+:::ar بالمصري · اختار الأمر على أساس **سؤالك** مش على أساس حفظك
+الصفحة دي مرتّبة على أساس **إنت عايز تعرف إيه**، مش أبجدي — عشان الساعة
+٣ الفجر إنت عارف **السؤال**، مش عارف اسم الـ flag.
+
+```diagram
+   عايز تعرف إيه؟
+      │
+      ├─ "إيه اللي شغّال؟"           → kubectl get
+      ├─ "ليه بايظ؟"                 → kubectl describe  →  kubectl logs
+      ├─ "بياكل قد إيه؟"             → kubectl top
+      ├─ "إيه اللي اتغير؟"           → kubectl get events / rollout history
+      ├─ "أقدر أدخل جواه؟"           → kubectl exec / debug
+      └─ "أقدر أوصله من اللاب؟"      → kubectl port-forward
+```
+
+**والقاعدة اللي تحفظها فوق أي حاجة:**
+
+> **`describe` الأول، وبعدين `logs --previous`.**
+
+الـ `describe` بيقولك **كوبرنيتيس** شايف إيه (الـ Events في الآخر بتكتب
+المشكلة بالكلام)، والـ `logs` بيقولك **التطبيق** قال إيه.
+
+والاتنين مع بعض بيحلوا أغلب المشاكل من غير أي أمر تالت.
+:::
 
 ## Setup — do these once
 
@@ -247,4 +274,31 @@ kubectl rollout undo deploy/<name>
 kubectl port-forward svc/<name> 8080:80
 kubectl get events -A --sort-by=.lastTimestamp | tail -20
 ```
+:::
+
+:::ar بالمصري · العشرة دول لو حفظتهم، خلصت
+| الأمر | بيعمل إيه | تستخدمه امتى |
+|:---|:---|:---|
+| `get pods -o wide` | البودات + الـ IP + النود | نظرة أولى |
+| `describe pod <pod>` | الحالة والـ **Events** | **أول أمر في أي مشكلة** |
+| `logs <pod> --previous` | لوجز الكونتينر **اللي مات** | `CrashLoopBackOff` |
+| `get endpoints <svc>` | فيه بودات ورا الـ Service؟ | «شغّال بس مش بيرد» |
+| `exec -it <pod> -- sh` | يدخّلك جوه البود | تبص بعينك |
+| `apply -f .` | ينشر كل ملفات المجلد | نشر |
+| `rollout status deploy/<n>` | يستنى التحديث ويفشل لو باظ | **بعد كل ديبلوي** |
+| `rollout undo deploy/<n>` | يرجّع الإصدار السابق | **وقت الأزمة** |
+| `port-forward svc/<n> 8080:80` | يوصّلك من اللاب | تجرّب سيرفيس داخلي |
+| `get events -A --sort-by=...` | كل اللي حصل بالترتيب الزمني | **كل حاجة بايظة مع بعض** |
+
+**وتلات حاجات عملية تفرق معاك كل يوم:**
+
+**١. `--previous` مش اختيارية لو بيكراش.** من غيرها بتشوف لوجز الكونتينر
+الجديد اللي لسه ما قالش حاجة، وبتقول «مفيش لوجز».
+
+**٢. `rollout undo` هي أول حركة وقت الأزمة، مش آخر حركة.** رجّع الخدمة
+الأول، وافهم بعدين. اللي بيقعد يفهم والموقع واقع ده بيطوّل الانقطاع.
+
+**٣. نصّب `kubectx` و `kubens`.** بيخلوك تنقل بين الكلاسترات والـ
+namespaces بكلمة واحدة بدل أوامر طويلة. أول حاجة أي حد بيشتغل على
+كوبرنيتيس بجد بينصّبها.
 :::

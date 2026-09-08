@@ -11,10 +11,14 @@ handled for you.
 ```bash
 # 1. Copy a template into the right directory, named after the slug
 cp templates/guide-template.md 08-observability/prometheus/prometheus.md
+#   ...or templates/interview-template.md for a note under 13-interviews/
 
 # 2. Write it. Fill the frontmatter first — the linter checks it.
+#    Both templates carry the :::ar and :::q scaffolding; fill it, do not
+#    delete it. A note with no Arabic layer is half a note here.
 
-# 3. Build: renders the site, regenerates INDEX.md, fails on broken links
+# 3. Build: renders the site, regenerates INDEX.md, fails on broken links,
+#    unbalanced ::: blocks and forbidden diagram glyphs
 node site/build.mjs
 
 # 4. Read it in the browser before calling it done
@@ -101,6 +105,8 @@ updated: 2026-09-06                  # YYYY-MM-DD
 | `level` between 1 and 5 | error if out of range |
 | `prerequisites` / `related` resolve | error if dangling |
 | No duplicate slugs | error |
+| Every `:::` block is closed | error, with the line number |
+| No `▶ ▼ ◀ ▲ ► ◄ ╌` inside a `diagram` fence | error, with the replacement |
 
 ---
 
@@ -123,8 +129,8 @@ Do not repeat it in the body — the renderer lifts it out automatically.
 
 ## 5. Callouts
 
-Five kinds. Two or three per note; a note that is half callouts has no
-hierarchy left.
+Six kinds. Two or three of the first five per note; a note that is half
+callouts has no hierarchy left. `:::ar` is the exception — see below.
 
 ```markdown
 :::tip      💡  a shortcut or a better way
@@ -132,6 +138,7 @@ hierarchy left.
 :::warn     ⚠   a sharp edge that will bite you
 :::danger   🚨  a real failure people actually hit
 :::note     📘  extra depth, safely skippable
+:::ar       💬  the same idea again, in Egyptian Arabic
 :::
 ```
 
@@ -146,9 +153,101 @@ Anything a container writes goes to a temporary layer…
 Reserve `:::danger` for genuine production failures. Using it for mild advice
 trains the reader to skip them.
 
+Callouts nest, and the closing `:::` must be balanced — **an unclosed one
+swallows the rest of the note**, silently. The build now fails on it, with the
+line number.
+
 ---
 
-## 6. Code and diagrams
+## 6. The Arabic layer — `:::ar`
+
+These notes are **bilingual**. English carries the technical spine — headings,
+commands, tables, output — and Egyptian Arabic (العامية المصرية) carries the
+teaching. The reader gets the terms they will meet in documentation and in an
+interview, explained in the language they think in.
+
+```markdown
+:::ar
+الـ **Image** ملف نايم على الديسك. والـ **Container** هو لما تشغّله ويبقى حي.
+
+تشوفهم بـ `docker images` و `docker ps`.
+:::
+```
+
+`:::ar` renders right-to-left in an Arabic face. Code, diagrams and command
+tables inside it are forced back to left-to-right, because mirrored box art is
+unreadable and a shell command is not prose.
+
+**A custom title is often worth it** — it becomes the block's one-line promise:
+
+```markdown
+:::ar بالمصري · ليه بيتشاركوا localhost؟
+```
+
+### The rules that keep it useful
+
+| Rule | Why |
+|:---|:---|
+| **Re-explain, do not translate** | A literal translation of the English adds nothing. Explain it *again*, differently, from the reader's side |
+| **Keep technical terms in English** | `Pod`, `readiness probe`, `SIGTERM`. The reader must recognise them in the docs and say them in an interview |
+| Write real Egyptian, not MSA | «يعني إيه» not «ما معنى». «إزاي» not «كيف». «عشان» not «لأن» |
+| One `:::ar` per section, after the English | It answers "…but what does that actually mean?" — so it has to come second |
+| Baby steps, and say the *why* | Motivate before mechanism. The reader can already see the mechanism above |
+| Commands, paths and output stay verbatim | Never translate a flag or a log line |
+
+Long Arabic keyword lists in the frontmatter may wrap — the parser folds a
+bracketed list back onto one line:
+
+```yaml
+keywords: [dockerfile, container, image, registry,
+           دوكر, كونتينر, ايميج, حاويات]
+```
+
+Arabic in tables, lists and headings needs no markup at all: the renderer marks
+any block containing an Arabic letter `dir="auto"`, so a mixed cell aligns
+itself.
+
+---
+
+## 7. Interview questions — `:::q`
+
+Any note may end with an **Interview corner**: the questions this topic is
+actually asked, and what the interviewer is listening for underneath them.
+
+```markdown
+:::q Is a container just a lightweight VM? · الكونتينر مجرد VM صغير؟
+**No, and the reason matters more than the answer.**
+
+A VM virtualises hardware and boots its own kernel…
+
+:::key What is really being tested
+Whether you can name the *consequence*, not just the difference.
+:::
+
+:::ar
+الإجابة القصيرة: لأ. والسبب هو اللي بيفرق…
+:::
+:::
+```
+
+It renders as a collapsed `<details>`, so the page works as a quiz on the first
+pass and a reference on the second. No JavaScript — the answer is always in the
+DOM, so it prints and Ctrl-F finds it while closed.
+
+| Rule | Why |
+|:---|:---|
+| The question is the summary | It is all the reader sees before deciding to open |
+| Answer the question **asked** | Explaining what a Service *is* when asked why it returns 503 is the classic fail |
+| Include **what is being tested** | A `:::key` or `:::warn` naming the real signal is the most valuable part |
+| Give the failure mode, not just the happy path | This is what separates levels |
+| 3–6 per topic note | More belongs in `13-interviews/` |
+
+Bilingual question text is fine and reads well: English question, `·`, then the
+Arabic. Both halves are searchable.
+
+---
+
+## 8. Code and diagrams
 
 Fence code with a language, and optionally a title bar:
 
@@ -197,7 +296,7 @@ Other diagram rules:
 
 ---
 
-## 7. Cross-linking
+## 9. Cross-linking
 
 ```markdown
 [[kubernetes-services]]              → linked, titled automatically
@@ -212,7 +311,7 @@ of first reliance — not three times in one note.
 
 ---
 
-## 8. Tables over prose
+## 10. Tables over prose
 
 Anything comparative belongs in a table. If a paragraph runs past three lines,
 it usually wants to be a table, a list, or a diagram.
@@ -222,7 +321,7 @@ question obvious.
 
 ---
 
-## 9. Before you commit
+## 11. Before you commit
 
 ```bash
 node site/build.mjs --check

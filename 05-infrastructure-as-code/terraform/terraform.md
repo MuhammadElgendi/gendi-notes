@@ -4,12 +4,14 @@ slug: terraform
 type: guide
 domain: 05-infrastructure-as-code
 tags: [terraform, iac, infrastructure]
-keywords: [hcl, state, plan, apply, provider, module, variable, output, backend, drift, opentofu]
+keywords: [hcl, state, plan, apply, provider, module, variable, output, backend,
+           drift, opentofu, import, state rm, lock, blast radius, tfvars,
+           تيرافورم, بنية تحتية, حالة, ستيت]
 level: 2
 status: stable
 prerequisites: []
-related: [ci-cd, kubernetes-basics]
-updated: 2026-09-06
+related: [ci-cd, kubernetes-basics, devops-interview-questions]
+updated: 2026-09-08
 ---
 
 # Terraform
@@ -78,6 +80,54 @@ Therefore:
 - The state backend must be **encrypted and access-controlled as tightly as the
   secrets inside it**.
 - Anyone who can read state has the credentials of everything in it.
+:::
+
+:::ar بالمصري · الـ State هي الحاجة اللي لازم تفهمها
+تيرافورم كل شغلته إنه يقارن **تلات أعمدة**:
+
+```diagram
+   الكود بتاعك          الـ STATE            الواقع
+   ───────────          ─────────            ──────
+   aws_instance.web  →  id = i-0abc123  →   السيرفر الحقيقي
+   (إنت عايز إيه)       (أنا عملت إيه)      (الموجود فعلاً)
+```
+
+**وليه الـ state موجودة من الأصل؟** سؤال ممتاز، والإجابة عملية:
+
+**مفيش API في أي كلاود بيقولك «اعرضلي كل حاجة *أنا* عملتها».** لو سألت
+AWS «هاتلي السيرفرات»، هيجيبلك كل السيرفرات — بتاعتك وبتاعة غيرك واللي
+اتعمل بالإيد.
+
+**فمن غير الـ state، تيرافورم مش قادر يفرّق بين:**
+
+- «اعمل السيرفر ده» ← عشان مش موجود
+- «السيرفر ده موجود خلاص» ← عشان أنا عملته قبل كده
+
+فهو بيكتب في ملف: «أنا عملت `aws_instance.web` وهو الـ `i-0abc123`».
+والملف ده هو الـ state.
+
+:::danger والـ state فيها الأسرار **مكتوبة صريح**، ومفيش حل لده
+دي أخطر حقيقة في تيرافورم، وناس كتير مش عارفينها.
+
+باسورد داتابيز اتولّد تلقائياً؟ مفتاح خاص؟ أي attribute حساس؟
+**كلهم مكتوبين في ملف الـ JSON من غير أي تشفير.**
+
+**و `sensitive = true` مش بتحل المشكلة!** هي بس بتخبّي القيمة من
+**المخرجات على الشاشة**. الملف زي ما هو.
+
+**وعلى كده، تلات قواعد:**
+
+1. **عمرك ما تعمل commit للـ state في جيت.** ده تسريب أسرار، **وبيفضل
+   في التاريخ بعد ما تمسحه**.
+2. **الـ backend لازم يكون مشفّر وصلاحياته مضبوطة زي الأسرار اللي جواه
+   بالظبط.** مش أقل.
+3. **أي حد يقدر يقرا الـ state، عنده صلاحيات كل حاجة فيها.** فحد
+   عنده read على البكت، ده عنده باسوردات الداتابيزات كلها.
+
+ولو حد سألك في انترفيو «إزاي نأمّن أسرار تيرافورم؟» — الإجابة الصح إنك
+**تقلّل الأسرار اللي تيرافورم بيولّدها من الأصل**، وتستخدم secret
+manager وتشاور عليه، بدل إنك تحاول تشفّر الـ state.
+:::
 :::
 
 ## How to use it
@@ -177,6 +227,61 @@ someone typing `yes` without reading. When you see `-/+` on anything stateful,
 stop and work out why.
 :::
 
+:::ar بالمصري · قراءة الـ plan هي أهم مهارة في تيرافورم كله
+الـ `plan` بيقولك **بالظبط** هو هيعمل إيه، **قبل** ما يعمله. وأربع رموز
+بس محتاج تعرفهم:
+
+| الرمز | معناه | خطر؟ |
+|:---|:---|:---|
+| `+` | بيعمل حاجة جديدة | عادي |
+| `~` | بيعدّل في مكانه — **من غير انقطاع** | عادي |
+| `-` | **بيمسح** | **خد بالك** |
+| `-/+` | **بيمسح ويعمل من الأول** | **دي الخطيرة** |
+
+**والـ `-/+` هي اللي لازم توقّفك.**
+
+معناها إن تيرافورم **مش قادر** يعدّل الحاجة دي في مكانها، فهو هيمسحها
+ويعمل واحدة جديدة.
+
+```diagram
+   -/+ على سيرفر              →  السيرفر بيتعمل من الأول
+                                  (توقّف، بس الداتا في مكان تاني)
+
+   -/+ على داتابيز RDS        →  **الداتا بتضيع**
+                                  (وده مش استعارة)
+
+   -/+ على volume             →  **الداتا بتضيع**
+```
+
+:::danger اقرا سطر الملخص. **كل مرة. من غير استثناء.**
+```text
+Plan: 0 to add, 1 to change, 0 to destroy.     ← تمام
+Plan: 1 to add, 0 to change, 1 to destroy.     ← على داتابيز؟ ده انقطاع
+```
+
+**تقريباً كل كارثة تيرافورم في التاريخ سببها حد كتب `yes` من غير ما
+يقرا.** مش أكتر ولا أقل.
+
+وتيرافورم **مش بيخبّي حاجة** — هو كتبلك بالظبط هيعمل إيه، وإنت اللي
+دوست.
+
+**فالقاعدة:** أول ما تشوف `-/+` على أي حاجة فيها **داتا**، **قف**، واعرف
+**ليه**. غالباً هتلاقي attribute صغير مالوش لازمة هو اللي مجبر تيرافورم
+على ده، وتقدر تغيّره أو تحطه في `lifecycle { ignore_changes }`.
+
+**وفي الـ CI، اعمل كده:**
+
+```sh
+terraform plan -out=tfplan      # احفظ الخطة **بالظبط**
+# راجعها، خُد موافقة
+terraform apply tfplan          # طبّق **الخطة دي هي** من غير حساب جديد
+```
+
+**وليه ده مهم؟** عشان من غير `-out`، الخطة اللي راجعتها والتغيير اللي
+بيتطبّق **حسابين مختلفين** — والدنيا ممكن تكون اتغيرت بينهم.
+:::
+:::
+
 ### Plan then apply, in CI
 
 ```sh
@@ -246,6 +351,49 @@ converts a question into an untracked, billing resource that nobody will find
 until an audit.
 :::
 
+:::ar
+تلات أوامر على الـ state لازم تعرفهم، **وواحد منهم خطر**:
+
+```sh
+terraform state list                     # كل حاجة تيرافورم بيديرها
+terraform state show aws_instance.web    # تفاصيل مورد واحد
+
+terraform import aws_instance.web i-0abc123   # يتبنّى مورد موجود
+terraform state rm aws_instance.web           # ← الخطير
+```
+
+**الـ `import`** بيقول لتيرافورم: «فيه حاجة موجودة، خُدها تحت إدارتك».
+مش بيمسح ولا بيغيّر حاجة، فهو **آمن**. والأفضل تستخدم `import` block
+في الكود (تيرافورم ١.٥+) عشان تبقى مراجَعة في PR.
+
+:::danger و `state rm` **مش** طريقة تصلّح بيها plan محيّر
+دي الغلطة اللي المُحاورين بيدوّروا عليها في الانترفيوهات.
+
+`terraform state rm` **مش بيمسح المورد**. هو بيمسح **معرفة تيرافورم**
+بالمورد.
+
+```diagram
+   قبل:   الكود ←→ الـ state ←→ السيرفر الحقيقي (تيرافورم بيديره)
+
+   بعد state rm:
+          الكود      الـ state       السيرفر الحقيقي
+                     (فاضية)         │
+                                     ├── لسه شغّال
+                                     ├── لسه بياكل فلوس
+                                     └── **ومحدش بيديره خلاص**
+```
+
+يعني إنت عملت **مورد يتيم**: شغّال، وبيتحاسب عليه، ومش في أي كود، ومحدش
+هيلاقيه غير في مراجعة حسابات بعد سنة.
+
+**فلو الـ plan محيّر، افهمه.** إنك تستخدم `state rm` عشان الحيرة تختفي،
+ده **بيحوّل سؤال لمشكلة مخفية**.
+
+**استخدامها الشرعي الوحيد:** إنك بتنقل مورد من state لـ state تانية
+(مع `import` في الناحية التانية).
+:::
+:::
+
 ### Drift
 
 Someone changed something in the console:
@@ -278,6 +426,39 @@ Split by **how often things change** and **who owns them**, not by resource
 type. A VPC that changes twice a year does not belong in the same state as
 applications that deploy hourly.
 
+:::ar بالمصري · دائرة الانفجار — قسّم الـ state
+**state واحدة = دائرة انفجار واحدة.** كل حاجة جواها ممكن تتدمّر بـ apply
+واحد غلط، وكل apply بيقفل عليها كلها.
+
+```diagram
+   STATE واحدة كبيرة                مقسّمة على معدّل التغيير
+   ┌─────────────────┐              ┌────────┐ ┌────────┐ ┌────────┐
+   │ الشبكة          │              │ الشبكة │ │ الداتا │ │ التطبيقات│
+   │ الداتابيز       │              │ (نادر) │ │ (نادر) │ │ (كل ساعة)│
+   │ ٤٠ تطبيق        │              └────────┘ └────────┘ └────────┘
+   └─────────────────┘
+   · plan بياخد ١٠ دقايق            · plans صغيرة وسريعة
+   · غلطة واحدة تدمّر الكل           · دائرة انفجار صغيرة
+   · كل apply يقفل كل حاجة           · الفرق بتشتغل مستقلة
+```
+
+**والتقسيم بيبقى على أساس إيه؟** حاجتين:
+
+1. **معدّل التغيير** — الحاجة اللي بتتغير كل ساعة مش مع اللي بتتغير
+   مرة في السنة.
+2. **مين المسؤول** — كل فريق ياخد الـ state بتاعته.
+
+**ومش** على أساس نوع المورد. يعني متقولش «state للسيرفرات و state
+للشبكات» — قول «state للأساسيات النادرة، و state للتطبيقات السريعة».
+
+**وليه ده مهم عملياً؟** لأن VPC بتتغير مرتين في السنة **مالهاش لازمة**
+تكون في نفس الـ state بتاع تطبيقات بتتنشر كل ساعة:
+
+- كل ديبلوي تطبيق بيقفل الشبكة كمان
+- الـ plan بيقرأ ٤٠٠ مورد عشان يغيّر واحد
+- وغلطة في التطبيق ممكن توصل للشبكة
+:::
+
 ## Common problems
 
 | Symptom | Cause | Fix |
@@ -296,6 +477,217 @@ re-import into a five-minute restore.
 Do it now, not after you need it.
 :::
 
+:::ar
+**فعّل versioning على البكت قبل أول `apply` في حياتك.**
+
+ده **إعداد واحد**، وبيحوّل «إحنا ضيّعنا ملف الـ state» من كارثة تاخد
+أيام (إنك تعمل `import` لكل مورد بإيدك، واحد واحد) لـ **استعادة في
+٥ دقايق**.
+
+**اعملها دلوقتي، مش بعد ما تحتاجها** — عشان لما تحتاجها هتكون فات الوقت.
+:::
+
+## Interview corner · الأسئلة اللي بتتسأل
+
+:::q What is Terraform state, why does it exist, and what happens if you lose it?
+State is Terraform's record mapping each resource in your **code** to the
+real object it created in the cloud (`aws_instance.web` → `i-0abc123`).
+
+**Why it must exist:** no cloud API can answer "list everything *Terraform*
+created". Without that mapping, Terraform cannot distinguish "create this"
+from "this already exists", so every plan would propose recreating your
+entire estate.
+
+**If you lose it:**
+
+| Available | Recovery |
+|:---|:---|
+| Bucket versioning on | Restore the previous version. Minutes |
+| A local `.tfstate.backup` | Restore it; may be slightly stale |
+| Nothing | `terraform import` every resource by hand — days, and error-prone |
+
+The real answer to the last row is that it should never happen: remote
+backend, encryption, **versioning**, and locking, configured before the first
+apply.
+
+:::key The follow-up that catches people
+"Can you just delete the state and re-apply?" **No** — Terraform would see an
+empty state, propose creating everything, and you would end up with duplicate
+infrastructure or a failed apply on name collisions. And on stateful
+resources, an `apply` against empty state is how people destroy production
+databases.
+:::
+
+:::ar
+الـ state هي سجل تيرافورم اللي بيربط كل مورد في **الكود** بالحاجة الحقيقية
+اللي عملها في الكلاود (`aws_instance.web` ← `i-0abc123`).
+
+**وليه لازم تكون موجودة؟** عشان **مفيش API في أي كلاود** بيجاوب على سؤال
+«اعرضلي كل حاجة *تيرافورم* عملها».
+
+فمن غير الربط ده، تيرافورم مش قادر يفرّق بين «اعمل ده» و «ده موجود خلاص» —
+وكل `plan` كان هيقترح إنه يعمل **كل حاجة عندك من الأول**.
+
+**ولو ضاعت؟**
+
+| المتاح | الاستعادة |
+|:---|:---|
+| versioning مفعّل على البكت | استرجع النسخة السابقة. **دقايق** |
+| ملف `.tfstate.backup` محلي | استرجعه، ممكن يكون قديم شوية |
+| **مفيش حاجة** | `import` لكل مورد بإيدك — **أيام**، ومعرّض للغلط |
+
+**والإجابة الحقيقية للسطر الأخير:** إنها **المفروض ما تحصلش أصلاً** —
+backend بعيد، ومشفّر، **وversioning**، ولوك، **كلهم مظبوطين قبل أول
+`apply`**.
+
+**والسؤال اللي بيوقّع الناس بعده:**
+
+«ما نمسح الـ state ونعمل apply من الأول؟»
+
+**لأ خالص.** تيرافورم هيشوف state فاضية، هيقترح يعمل **كل حاجة**، وإنت
+هتلاقي نفسك يا إما بنية تحتية **مكرّرة**، يا إما `apply` فاشل بسبب
+تعارض أسماء.
+
+**وعلى الموارد اللي فيها داتا، الـ `apply` على state فاضية هو بالظبط
+إزاي الناس بتدمّر داتابيزات البرودكشن.**
+:::
+:::
+
+:::q Someone changed a security group in the console. Terraform state is now out of date. What do you do?
+Two halves — the fix, and the reason. Only giving the first reads as junior.
+
+**The fix:**
+
+```sh
+terraform plan                    # see the drift. Do NOT apply blindly
+terraform apply -refresh-only     # reconcile state with reality, changes nothing real
+terraform import ...              # if they created something new
+```
+
+Then make a **deliberate** decision:
+
+| Decision | Action |
+|:---|:---|
+| The console change should stay | Write it into the code, then `apply` — code and reality agree |
+| The console change should go | Let `apply` revert it |
+
+:::warn Reverting someone's emergency fix causes a second incident
+If that security group change was an urgent fix during an outage, a blind
+`terraform apply` re-breaks production. Find out *why* it was changed before
+you undo it.
+:::
+
+**The reason it happened:** console write access existed. The durable fix is
+process, not commands:
+
+- Remove human write permissions in production; the pipeline's identity is
+  the only thing that can apply.
+- Add a **scheduled drift check** — `terraform plan -detailed-exitcode`
+  exits 2 on a diff, so it is a one-line CI job that finds this in an hour
+  rather than in six weeks.
+- Tag resources `ManagedBy = terraform` so a human in the console can see
+  they should not touch it.
+
+:::ar
+جاوب على نصين: **الحل**، وبعدين **سبب حدوثها**. اللي بيقول النص الأول
+بس بيبان جونيور.
+
+**الحل:**
+
+```sh
+terraform plan                    # شوف الفرق. **ومتعملش apply على أعمى**
+terraform apply -refresh-only     # وفّق الـ state مع الواقع، من غير تغيير حقيقي
+terraform import ...              # لو عملوا حاجة جديدة
+```
+
+**وبعدين قرّر بوعي:**
+
+| القرار | التصرّف |
+|:---|:---|
+| التغيير يفضل | اكتبه في الكود، وبعدين `apply` — فالكود والواقع يتفقوا |
+| التغيير يروح | سيب `apply` يرجّعه |
+
+:::warn وإنك ترجّع إصلاح طارئ عمله حد، **ده بيعمل مشكلة تانية**
+لو تغيير الـ security group ده كان **إصلاح مستعجل وقت انقطاع**، فالـ
+`apply` الأعمى **بيرجّع البرودكشن للعطل تاني**.
+
+**اعرف ليه اتغيّر قبل ما ترجّعه.** اسأل. دقيقة سؤال أرخص من انقطاع تاني.
+:::
+
+**والسبب الحقيقي لحدوثها:** إن حد كان معاه **صلاحية كتابة على الكونسول**.
+
+والحل الدايم **عملية، مش أوامر**:
+
+- **اشيل صلاحيات الكتابة البشرية من البرودكشن.** هوية الـ pipeline
+  هي الوحيدة اللي تقدر تعمل apply.
+- **حُط drift check بجدول.** `terraform plan -detailed-exitcode` بيرجّع
+  ٢ لو فيه فرق، فهي **وظيفة CI من سطر واحد** بتكتشف ده في **ساعة** مش
+  في ٦ أسابيع.
+- **حُط تاج `ManagedBy = terraform`** على الموارد، عشان أي حد يفتح
+  الكونسول يشوف إنه مش المفروض يلمسها.
+:::
+:::
+
+:::q `Error acquiring the state lock`. What is it protecting, and when is `force-unlock` safe?
+The lock prevents **two applies running at once**. Without it, two engineers
+reading the same state, each computing a plan from it, and each writing back
+their result produces a state file that describes neither — with real
+resources orphaned or duplicated.
+
+```diagram
+   no lock:
+   engineer A  read state ──→ plan ──→ apply ──→ write state
+   engineer B      read state ──→ plan ──→ apply ──→ write state
+                                                     └─ overwrites A's
+                                                        A's resources now
+                                                        exist but are
+                                                        untracked
+```
+
+**Legitimate causes:** someone is genuinely applying right now; or a previous
+run crashed (CI runner killed, laptop closed) and left the lock behind.
+
+**`force-unlock` is safe only when you have verified no apply is running.**
+Check who holds it first — the error message names the user, the operation
+and the timestamp:
+
+```sh
+terraform force-unlock <LOCK_ID>
+```
+
+Force-unlocking while an apply is genuinely in progress is how you get the
+corrupted state the lock exists to prevent.
+
+:::ar
+اللوك بيمنع **تنفيذ اثنين `apply` في نفس الوقت**.
+
+من غيره، لو مهندسين قرأوا نفس الـ state، وكل واحد حسب خطته منها، وكل
+واحد كتب نتيجته — الملف اللي بيطلع في الآخر **مش بيوصف أي واحد منهم**.
+والنتيجة موارد حقيقية يتيمة أو مكرّرة.
+
+بص على الرسمة فوق: المهندس B كتب فوق شغل A، فموارد A **موجودة فعلاً**
+بس **مش مسجّلة في أي state**.
+
+**والأسباب المشروعة للرسالة دي:**
+
+1. فيه حد **فعلاً** بيعمل apply دلوقتي. **استنى.**
+2. تنفيذ قديم **مات** (runner اتقتل، لاب اتقفل) وسايب اللوك وراه.
+
+**و `force-unlock` آمنة بس لما تتأكد إن مفيش apply شغّال.**
+
+والرسالة نفسها بتقولك **مين ماسك اللوك، وعمل إيه، وامتى**:
+
+```sh
+terraform force-unlock <LOCK_ID>
+```
+
+**وإنك تعمل force-unlock وفيه apply فعلاً شغّال، ده بالظبط إزاي تجيب
+الـ state الفاسدة اللي اللوك موجود عشان يمنعها.**
+
+فاسأل الفريق الأول. الرسالة فيها اسم اليوزر — كلّمه.
+:::
+:::
+
 ## Key takeaways
 
 - **Code → plan → apply.** Read the plan every time.
@@ -307,3 +699,16 @@ Do it now, not after you need it.
 - **`state rm` does not delete the resource** — it abandons it, still billing.
 - **Bucket versioning today.** It is the difference between an inconvenience and
   a disaster.
+
+:::ar بالمصري · الخلاصة
+1. **كود ← plan ← apply.** واقرا الـ plan **كل مرة**.
+2. **`-/+` معناها امسح واعمل من الأول.** على داتابيز، دي **ضياع داتا**.
+3. **الـ state بتربط كودك بالموارد الحقيقية**، وفيها **أسرار مكتوبة
+   صريح**، **وممنوع تتعمل commit** خالص.
+4. **state بعيدة مع locking** من اللحظة اللي يبقى فيها شخص تاني معاك.
+5. **state واحدة = دائرة انفجار واحدة.** قسّم على أساس **معدّل التغيير**.
+6. **`state rm` مش بتمسح المورد** — بتسيبه يتيم، شغّال وبياكل فلوس.
+7. **فعّل versioning على البكت النهاردة.** ده الفرق بين إزعاج وكارثة.
+8. **`terraform plan -out=tfplan`** وبعدين `apply tfplan` — عشان تطبّق
+   **الخطة اللي راجعتها** مش خطة جديدة.
+:::

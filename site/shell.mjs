@@ -29,7 +29,14 @@ const FONTS =
   '<link rel="preconnect" href="https://fonts.googleapis.com">' +
   '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
   '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?' +
-  'family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">';
+  'family=Inter:wght@400;500;600;700' +
+  '&family=JetBrains+Mono:wght@400;500' +
+  /* Cairo carries the Egyptian-Arabic explainer blocks. Requested with the
+     arabic subset only — Cairo also ships Latin, and letting it win over
+     Inter for stray Latin words inside an Arabic paragraph would make the
+     two languages disagree about size. */
+  '&family=Cairo:wght@400;600;700&subset=arabic' +
+  '&display=swap">';
 
 /* The theme is applied before first paint by a separate file, not an inline
    script: the CSP is script-src 'self' with no 'unsafe-inline'. */

@@ -12,19 +12,26 @@ understandable rather than merely memorisable.
 ```diagram
    Linux ──→ Networking ──→ Git ──→ Docker ──→ CI/CD
                                        │
-                                       ▼
+                                       ↓
                                   Kubernetes ──→ Terraform
                                        │
-                                       ▼
+                                       ↓
                               Observability ──→ SRE
                                        │
-                                       ▼
+                                       ↓
                          Databases ──→ System Design
 ```
 
 The most common mistake in this field is starting at Kubernetes. It is possible,
 but you end up memorising commands — and every debugging session eventually
 bottoms out in Linux and networking concepts you skipped.
+
+**How to read a note.** Each section is written twice: once in English, once in
+Egyptian Arabic (`بالمصري`). Read the English first — the terms are the ones you
+will meet in the documentation — then the Arabic, which explains the same idea
+from the beginning and usually answers the "…but what does that *mean*?" the
+English left implicit. Then work the **Interview corner** at the end as a quiz
+before you read its answers.
 
 ---
 
@@ -80,7 +87,7 @@ becomes expensive.
    Kubernetes networking needs:
       Linux namespaces + TCP/IP + DNS + routing
                     │
-                    ▼
+                    ↓
       without these, "kube-proxy writes iptables rules"
       is a sentence you can repeat but not use
 ```
@@ -122,11 +129,11 @@ failure you care about.
 
 | | Note | Level |
 |:--|:---|:---|
+| ✅ | [Prometheus](08-observability/prometheus/prometheus.md) — including PromQL and cardinality | L2 |
+| ✅ | [SLOs and Error Budgets](07-sre/error-budgets/slo-and-error-budgets.md) | L3 |
 | ○ | Metrics, logs and traces: what each is for | L2 |
-| ○ | Prometheus and PromQL | L2 |
 | ○ | Grafana dashboards | L2 |
 | ○ | Alerting that does not page you for nothing | L3 |
-| ○ | SLI, SLO and error budgets | L3 |
 | ○ | Incident response | L3 |
 | ○ | Postmortems | L3 |
 
@@ -153,10 +160,16 @@ interview note tests. Reading the interview note first teaches you to recite.
 
 | | Note | Level |
 |:--|:---|:---|
-| ○ | Linux and networking questions | L2 |
-| ○ | Kubernetes questions | L3 |
+| ✅ | [DevOps Interview Questions](13-interviews/devops/devops-interview-questions.md) | L4 |
+| ✅ | [Troubleshooting Scenarios](13-interviews/troubleshooting/troubleshooting-scenarios.md) | L4 |
+| ✅ | [Interview Tips and Tricks](13-interviews/devops/interview-tips-and-tricks.md) | L4 |
 | ○ | SRE and reliability questions | L3 |
 | ○ | System design questions | L4 |
+| ○ | Behavioural, by level | L3 |
+
+Every topic note also ends with its own **Interview corner** — three to six
+questions specific to that topic, collapsed so the page works as a quiz first.
+Those are the drill; the notes above are the method.
 
 ---
 

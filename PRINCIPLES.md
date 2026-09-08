@@ -167,6 +167,46 @@ close.
 
 ---
 
+## ⑮ Explain twice, in two languages
+
+Every section is written once in English and once in Egyptian Arabic. This is
+not a translation requirement — a literal translation would add nothing and
+double the maintenance for no gain.
+
+It is a **second pass at the explanation**, and that is the point. Saying the
+same mechanism a second way exposes the part the first way left implicit:
+
+| The English says | The Arabic has to answer |
+|:---|:---|
+| "`-p host:container`" | …so which number is which, and how do I remember? |
+| "A Service routes to Ready pods" | …so what happens to the ones that are not Ready? |
+| "Layers are append-only" | …so what does `rm` in a later layer actually do? |
+
+If writing the Arabic version is easy, the English was probably complete. If it
+is hard, the English was hiding a gap — go back and fix the English too.
+
+**Technical terms stay in English.** `Pod`, `readiness probe`, `SIGTERM`,
+`OOMKilled`. The reader has to recognise them in the official documentation and
+say them out loud in an interview; translating them would teach a private
+vocabulary that works nowhere else.
+
+---
+
+## ⑯ Say what the interviewer is testing
+
+A question has two answers: the fact, and the reason the question exists. The
+second is the one worth writing down, because a reader can know the fact and
+still fail the question.
+
+> "Why is this image 1.2 GB?" is not testing whether you know about
+> multi-stage builds. It is testing whether you **measure before optimising** —
+> which is why the answer starts with `docker history`, not with `alpine`.
+
+Every `:::q` card should carry that line. Without it the card is a flashcard;
+with it, it teaches judgement, which is the thing that actually transfers.
+
+---
+
 ## The test
 
 Before adding anything:

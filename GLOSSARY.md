@@ -7,24 +7,69 @@ Terms are grouped by where the confusion usually is, not alphabetically —
 looking one up is easier when its neighbours are the things it gets confused
 with.
 
+**The terms themselves stay in English, deliberately.** You have to recognise
+them in the official documentation and say them out loud in an interview;
+translating them would teach a private vocabulary that works nowhere else. The
+*explanations* are bilingual — see the pairs table below, and the `:::ar` blocks
+in every note.
+
+---
+
+## الفروق اللي بتتلخبط · the pairs people mix up
+
+The whole glossary is worth reading, but these are the distinctions that cost
+people interviews and outages. Each row is one confusion, settled.
+
+| الكلمتين | الفرق في سطر | فين تقرا أكتر |
+|:---|:---|:---|
+| **Image** ضد **Container** | الـ image **ملف نايم على الديسك**، والـ container **عملية شغالة** منه | [Docker](02-containers/docker/docker.md) |
+| **`request`** ضد **`limit`** | الـ request بيقرأها **الـ scheduler** مرة واحدة، والـ limit بيفرضها **الكيرنل** على طول | [Kubernetes Basics](03-kubernetes/fundamentals/kubernetes-basics.md) |
+| **Memory limit** ضد **CPU limit** | تعدّي الرام → **بيموت** (OOMKilled). تعدّي المعالج → **بيتخنق** ويبقى بطيء وعايش | [Kubernetes Basics](03-kubernetes/fundamentals/kubernetes-basics.md) |
+| **`Running`** ضد **`Ready`** | `Running` = العملية قامت. `Ready` = الـ probe بتنجح. **والـ Service بيبعت للـ Ready بس** | [Kubernetes Basics](03-kubernetes/fundamentals/kubernetes-basics.md) |
+| **readiness** ضد **liveness** | الـ readiness **بتشيل من الترافيك**. الـ liveness **بتقتل وترجّع** | [Kubernetes Deployments](03-kubernetes/deployments/kubernetes-deployments.md) |
+| **`refused`** ضد **`timeout`** | `refused` = الجهاز **رد** ومفيش حاجة سامعة. `timeout` = **سكوت** = فايروول | [Networking Basics](00-foundations/networking/networking-basics.md) |
+| **`SIGTERM`** ضد **`SIGKILL`** | `SIGTERM` **طلب** والبرنامج بيقدر يرد عليه. `SIGKILL` **مش بيوصله أصلاً** | [Linux Basics](00-foundations/linux/linux-basics.md) |
+| **`kill`** ضد **`kill -9`** | الأول بيطلب بالذوق، والتاني بيفرض من غير أي تنظيف | [Linux Basics](00-foundations/linux/linux-basics.md) |
+| **`reset`** ضد **`revert`** | `reset` **للمحلي**، `revert` **للمنشور**. والسؤال: «فيه حد تاني شافها؟» | [Git](01-devops/git/git.md) |
+| **merge** ضد **rebase** | merge **بيحفظ** التاريخ، rebase **بيعيد كتابته** بهاشات جديدة | [Git](01-devops/git/git.md) |
+| **`reload`** ضد **`restart`** | `reload` بيحافظ على الكونيكشنز، `restart` بيقطعها | [Linux Basics](00-foundations/linux/linux-basics.md) |
+| **`df`** ضد **`du`** | `df` بيسأل الفايل سيستم عن **المحجوز**، `du` بيجمع **اللي شايفه** | [Linux Basics](00-foundations/linux/linux-basics.md) |
+| **`dig`** ضد **`getent hosts`** | `dig` بيسأل الـ DNS، و `getent` بيمشي على **طريق تطبيقك الحقيقي** | [DNS](00-foundations/networking/dns.md) |
+| **`port`** ضد **`targetPort`** | `port` بتاعة **الـ Service**، `targetPort` بتاعة **الكونتينر** | [Kubernetes Services](03-kubernetes/services/kubernetes-services.md) |
+| **`emptyDir`** ضد **PVC** | `emptyDir` **بيموت مع البود**. الـ PVC بيعيش بعده | [Kubernetes Pods](03-kubernetes/pods/kubernetes-pods.md) |
+| **`apply`** ضد **`create`** | `apply` بينفع تكرره وبيوصل لنفس النتيجة، `create` بيفشل لو الحاجة موجودة | [Kubernetes Basics](03-kubernetes/fundamentals/kubernetes-basics.md) |
+| **Continuous Delivery** ضد **Deployment** | الأول **جاهز للنشر** وبني آدم بيدوس، والتاني **بيتنشر لوحده** | [CI/CD](01-devops/ci-cd/ci-cd.md) |
+| **`latest`** ضد tag ثابت | `latest` **استيكر حد بيحرّكه**، مش «الأحدث» | [Docker Images](02-containers/images/docker-images.md) |
+| **`state rm`** ضد **`destroy`** | `state rm` **مش بيمسح المورد** — بيسيبه يتيم شغّال وبياكل فلوس | [Terraform](05-infrastructure-as-code/terraform/terraform.md) |
+| **SLI / SLO / SLA** | قياس / هدف داخلي / **عقد بفلوس** | Reliability, below |
+| **Utilisation** ضد **Saturation** | الأول «مشغول قد إيه»، والتاني **«فيه طابور قد إيه»** — والتاني هو مصدر البطء | Latency and load, below |
+
 ---
 
 ## Reliability
 
 **SLI** — a *measurement* of service behaviour, expressed as good events ÷ valid
 events. Just a number; missing it has no consequence.
+→ [SLOs and Error Budgets](07-sre/error-budgets/slo-and-error-budgets.md)
 
 **SLO** — an internal *target* for an SLI. Missing it triggers engineering
 policy, not money.
+→ [SLOs and Error Budgets](07-sre/error-budgets/slo-and-error-budgets.md)
 
 **SLA** — an external *contract* with financial consequences. Always looser than
 your SLO, so you notice before the customer's lawyer does.
 
 **Error budget** — `1 − SLO` expressed as allowed failure. Its purpose is to
 settle the ship-fast-vs-be-careful argument *before* it happens.
+→ [SLOs and Error Budgets](07-sre/error-budgets/slo-and-error-budgets.md)
 
 **Burn rate** — how fast the error budget is being consumed relative to
 sustainable. Burn rate 1 = the budget lasts exactly the SLO window.
+
+**Cardinality** — the number of distinct label-value combinations in a metric.
+Each combination is one time series held in memory, which is why an unbounded
+label (a user ID) exhausts a monitoring system rather than merely bloating it.
+→ [Prometheus](08-observability/prometheus/prometheus.md)
 
 **Toil** — manual, repetitive, automatable work that scales with service size and
 has no enduring value. Not "work I dislike".

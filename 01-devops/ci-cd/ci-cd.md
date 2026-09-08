@@ -4,12 +4,15 @@ slug: ci-cd
 type: guide
 domain: 01-devops
 tags: [ci-cd, automation, pipelines]
-keywords: [continuous integration, continuous delivery, pipeline, github actions, build, test, deploy, artifact, rollback]
+keywords: [continuous integration, continuous delivery, pipeline,
+           github actions, build, test, deploy, artifact, rollback, canary,
+           blue green, oidc, flaky tests, migrations, concurrency,
+           بايبلاين, نشر, اختبارات, أتمتة]
 level: 2
 status: stable
 prerequisites: [git, docker]
-related: [docker-images, terraform]
-updated: 2026-09-06
+related: [docker-images, terraform, devops-interview-questions]
+updated: 2026-09-08
 ---
 
 # CI/CD
@@ -27,6 +30,55 @@ updated: 2026-09-06
 Both CDs are legitimate. Most teams want continuous **delivery** — automated all
 the way to production-ready, with a deliberate decision to release.
 
+:::ar
+الاختصارات دي بتتقال مع بعض على طول، والناس بتخلط بينهم. **وهما تلاتة
+حاجات مش اتنين.**
+
+| | معناه | بيجاوب على سؤال إيه |
+|:---|:---|:---|
+| **CI** | Continuous **Integration** | «الكود لسه بيبني وبينجح في التستات؟» |
+| **CD** | Continuous **Delivery** | «كل نسخة ناجحة **جاهزة** للنشر؟» (وبني آدم بيدوس) |
+| **CD** | Continuous **Deployment** | «كل نسخة ناجحة **بتتنشر** لوحدها فوراً» |
+
+شوف الـ CD مرتين؟ **دي فعلاً كلمتين مختلفتين بنفس الاختصار**، والفرق
+بينهم **مين بيدوس الزرار**:
+
+```diagram
+   Continuous Delivery                Continuous Deployment
+   ───────────────────                ─────────────────────
+   push → بناء → تست → جاهز           push → بناء → تست → **نشر**
+                        │
+                        ↓
+                  ⏸ مستني بني آدم
+                        │
+                        ↓
+                      نشر
+```
+
+**وأغلب الفرق عايزة الـ Delivery** — يعني كل حاجة أوتوماتيك لحد باب
+البرودكشن، وقرار الدخول بيبقى قرار واعي.
+
+:::key وليه البايبلاين موجودة من الأصل؟
+الناس بتفتكر إن الفايدة هي **السرعة**. وهي مش السرعة.
+
+الفايدة إن العملية **مكتوبة، ومتكررة، وواحدة بالظبط كل مرة**.
+
+```diagram
+   النشر بالإيد                       بايبلاين
+   ─────────────                       ────────
+   خطوة تتنسى                          نفس الخطوات كل مرة
+   شغّال على جهاز واحد بس              شغّال في بيئة نضيفة
+   محدش فاكر اتنشر إيه بالظبط          مكتوب بالتاريخ والـ commit
+   الرجوع = تفتكر وتعيد بإيدك          الرجوع = أمر واحد
+```
+
+**والجملة اللي تفتكرها:** نفس الخطوات بتتنفّذ بنفس الترتيب، **سواء إنت
+مرتاح يوم التلات، أو مرعوب يوم الخميس الساعة ١١ بالليل.**
+
+ودي هي القيمة الحقيقية. السرعة مكسب إضافي.
+:::
+:::
+
 ## Why it exists
 
 Manual releases fail in predictable ways: a step gets skipped, it works on one
@@ -42,25 +94,25 @@ whether you are calm on a Tuesday or panicking on a Friday.
 ```diagram
    push / pull request
       │
-      ▼
+      ↓
    ① BUILD      compile, build the image        fail fast, cheapest first
       │
-      ▼
+      ↓
    ② TEST       unit → integration → lint
       │
-      ▼
+      ↓
    ③ PACKAGE    tag the artifact with the Git SHA
       │
-      ▼
+      ↓
    ④ PUBLISH    push to a registry
       │
-      ▼
+      ↓
    ⑤ DEPLOY staging     automatic
       │
-      ▼
+      ↓
    ⑥ VERIFY     smoke tests against staging
       │
-      ▼
+      ↓
    ⑦ DEPLOY production   automatic (deployment) or gated (delivery)
 ```
 
@@ -79,6 +131,47 @@ staging test then proves nothing about production.
 Build one image, tag it with the Git SHA, and promote **that exact image**
 through each environment. Configuration changes between environments; the
 artifact does not.
+:::
+
+:::ar بالمصري · **ابني مرة واحدة، ورقّي نفس الحاجة**
+دي أهم قاعدة في البايبلاين كلها، وأشهر غلطة معمارية في نفس الوقت.
+
+**الغلط:**
+
+```diagram
+   الكود ──→ ابني ──→ انشر على staging      (صورة رقم ١)
+   الكود ──→ ابني ──→ انشر على production   (صورة رقم ٢)
+```
+
+شكلها بريئة، **وهي كارثة**.
+
+**ليه؟** عشان البناء التاني **مش مضمون يطلّع نفس البايتات**:
+
+- الـ base image ممكن تكون اتحدّثت في الوقت اللي بين البنايتين
+- مكتبة من مكتبات المكتبات (transitive dependency) طلعت نسخة جديدة
+- الـ timestamps والـ hashes مختلفة
+
+**والنتيجة:** إنت اختبرت على **staging** حاجة، وشغّلت في **البرودكشن**
+حاجة تانية. **فكل اختبارك مبقى بيثبت أي حاجة عن البرودكشن.**
+
+**والصح:**
+
+```diagram
+   الكود ──→ ابني **مرة واحدة** ──→ صورة واحدة بتاج = commit SHA
+                                          │
+                    ┌─────────────────────┼─────────────────────┐
+                    ↓                     ↓                     ↓
+                 staging                  QA               production
+              (نفس الصورة)           (نفس الصورة)         (نفس الصورة)
+```
+
+**والإعدادات هي اللي بتتغير بين البيئات، مش الـ artifact.**
+
+يعني الصورة واحدة، والـ `DATABASE_URL` وباقي المتغيرات هي اللي مختلفة —
+وبتيجي من ConfigMaps أو Secrets، مش من بناء جديد.
+
+**وده معناه:** لما تختبر على staging وتنجح، إنت **فعلاً** اختبرت البايتات
+اللي هتشتغل في البرودكشن. وده الغرض كله.
 :::
 
 ## How to use it — a real GitHub Actions pipeline
@@ -178,6 +271,56 @@ worse than having no pipeline.
 The same applies to any deploy tool: **always wait for and verify the result.**
 :::
 
+:::ar بالمصري · بايبلاين بتقول «نجح» والبرودكشن واقع
+دي أخطر حاجة في الصفحة، عشان **البايبلاين اللي بتكدب أسوأ من إنك ملكش
+بايبلاين خالص**.
+
+**اللي بيحصل:**
+
+```diagram
+   kubectl set image deploy/web web=myapp:abc123
+        │
+        │  بيرجع **فوراً** بنجاح
+        │  عشان هو بس سجّل "المطلوب" في etcd
+        ↓
+   البايبلاين تشوف exit code = 0
+        │
+        ↓
+   ✅ أخضر! الديبلوي نجح!
+        │
+        └──→ وفي نفس اللحظة، البودات الجديدة في CrashLoopBackOff
+             والموقع واقع، وإنت رايح تنام
+```
+
+**السبب:** `kubectl set image` **مش بينشر**. هو بس بيكتب المطلوب وبيمشي.
+النشر الحقيقي بيحصل بعده بواسطة الكنترولرز.
+
+**والحل سطر واحد:**
+
+```sh
+kubectl rollout status deploy/web --timeout=5m
+```
+
+ده **بيستنى** البودات تبقى `Ready`، **وبيرجع كود غير صفر لو ما بقتش**.
+فالبايبلاين تفشل، وإنت تعرف.
+
+**والقاعدة العامة أهم من الأمر نفسه:**
+
+> **أي أداة نشر: استنى النتيجة واتأكد منها.**
+
+مش مهم الأداة — Helm، أو ArgoCD، أو سكريبت بتاعك. لازم يكون فيه خطوة
+بتشوف **النتيجة الحقيقية** مش بس **إن الأمر اتبعت**.
+
+**وبعدها كمان:** حُط خطوة **verify** بتضرب على الـ health endpoint فعلاً
+من بره:
+
+```sh
+curl -fsS https://api.example.com/health || exit 1
+```
+
+عشان «البودات Ready» و «الموقع بيشتغل» **حاجتين مختلفتين**.
+:::
+
 ## Secrets
 
 ```yaml
@@ -227,6 +370,51 @@ This constraint is not obvious until it causes an outage during an ordinary
 deploy.
 :::
 
+:::ar بالمصري · الـ rolling update معناها **نُسختين شغالين مع بعض**
+دي نقطة كل الناس بتنساها، ولحد ما توقّع الموقع في ديبلوي عادي جداً.
+
+```diagram
+   خلال الديبلوي — لدقايق
+   ────────────────────────
+
+   نسخة قديمة (v1)  ███░░░   لسه بتخدم ترافيك
+   نسخة جديدة (v2)  ░░░███   وبتخدم ترافيك كمان
+        │                 │
+        └────────┬────────┘
+                 ↓
+        **نفس الداتابيز**
+```
+
+**والنتيجة قاعدتين مقدّستين:**
+
+**١. الـ migrations لازم تبقى متوافقة للخلف.**
+
+| آمن | خطر |
+|:---|:---|
+| تضيف عمود nullable | **تمسح عمود** |
+| تضيف جدول | **تغيّر اسم عمود** |
+| تضيف index | **تضيّق نوع عمود** |
+
+ليه؟ عشان لو مسحت عمود، **النسخة القديمة اللي لسه شغالة بتضرب فوراً**
+عشان هي لسه بتسأل عن العمود ده.
+
+**والحل: التغيير على مرحلتين (أو تلاتة).** عايز تغيّر اسم عمود من
+`name` لـ `full_name`؟
+
+```diagram
+   ديبلوي ١:  ضيف full_name  +  الكود يكتب في الاتنين ويقرأ من name
+   ديبلوي ٢:  الكود يقرأ من full_name  (والاتنين لسه موجودين)
+   ديبلوي ٣:  الكود يبطّل يكتب في name
+   ديبلوي ٤:  امسح العمود name
+```
+
+طويلة؟ أيوه. **بس مفيش انقطاع.** والبديل إنك توقّف الخدمة، وده تنازل
+تاخده بوعي مش بالغلط.
+
+**٢. الـ APIs لازم تتحمّل النسختين.** نفس المنطق: انشر كود بيقبل الشكل
+القديم والجديد الأول، وبعدين حوّل اللي بيبعت، وبعدين شيل الطريق القديم.
+:::
+
 ## What makes a pipeline good
 
 ```diagram
@@ -243,6 +431,265 @@ without reading them. From then on, real failures get re-run too.
 A flaky test is worse than a missing test. Fix it or delete it — leaving it is
 the only option that damages you.
 :::
+
+:::ar
+**البايبلاين الكويسة أربع صفات:**
+
+```diagram
+   FAST        أقل من ١٠ دقايق، وإلا الناس بتبطّل تستناها
+   RELIABLE    الأحمر معناه كود باظ، **عمره ما يبقى تخبّط**
+   REVERSIBLE  الرجوع أمر واحد، **وإنت جرّبته قبل كده**
+   VISIBLE     اللوج بيقول **إيه** اللي فشل، مش بس إن فيه حاجة فشلت
+```
+
+:::danger والتستات المتخبّطة (flaky) بتقتل قيمة البايبلاين كلها
+دي أخطر حاجة على الفريق، وأغلب الناس مش شايفة خطورتها.
+
+**تست واحد بيفشل ٥٪ من المرات** بيعلّم الفريق كله حاجة واحدة:
+**«لو أحمر، اعمل re-run».**
+
+```diagram
+   تست متخبّط واحد
+        ↓
+   الناس بتعمل re-run من غير ما تقرأ
+        ↓
+   بيبقى عُرف: "الأحمر مش معناه حاجة"
+        ↓
+   يوم يجي فشل **حقيقي**
+        ↓
+   حد يعمل re-run... ويعمل re-run... وبعدين يمرّره
+        ↓
+   الباج يوصل البرودكشن
+```
+
+**والتست المتخبّط أسوأ من إنه مش موجود خالص.** التست الناقص بيخليك
+مش عارف. التست المتخبّط بيعلّمك **تتجاهل** اللي إنت عارفه.
+
+**فصلّحه أو امسحه.** إنك تسيبه هو **الاختيار الوحيد اللي بيضرّك**.
+:::
+:::
+
+## Interview corner · الأسئلة اللي بتتسأل
+
+:::q A deploy needs a database migration that renames a column. Design it so there is no downtime.
+The answer is that you **cannot rename it in one step** — during a rolling
+update both versions are live against the same database, so the old code
+would query a column that no longer exists.
+
+You do it as an **expand / contract** sequence, over several deploys:
+
+```diagram
+   deploy 1   ADD full_name (nullable)
+              code writes BOTH columns, reads `name`
+                    │  old pods still work: `name` is intact
+                    ↓
+   deploy 2   code reads `full_name`, still writes both
+                    │  backfill existing rows here
+                    ↓
+   deploy 3   code stops writing `name`
+                    │  nothing reads it any more
+                    ↓
+   deploy 4   DROP `name`
+```
+
+Each step is independently safe and independently rollback-able, which is the
+actual requirement.
+
+| Safe in one step | Needs expand/contract |
+|:---|:---|
+| Add a nullable column | Rename a column |
+| Add a table or index | Drop a column |
+| Widen a type (`int` → `bigint`) | Narrow a type |
+| Add a default | Add a `NOT NULL` without a default |
+
+:::key What is really being tested
+Whether you know that **the deploy and the schema are two independent
+timelines**, and that a rolling update makes them overlap. A candidate who
+answers "run the migration in an init container before the new version
+starts" has missed that the *old* pods are still serving.
+:::
+
+:::ar
+الإجابة إنك **مش تقدر تغيّر الاسم في خطوة واحدة**.
+
+عشان خلال الـ rolling update **النسختين شغالين على نفس الداتابيز**، فالكود
+القديم هيسأل عن عمود مش موجود، وهيضرب.
+
+**الحل تسلسل اسمه expand/contract**، على كذا ديبلوي:
+
+```diagram
+   ديبلوي ١   ضيف full_name (nullable)
+              الكود يكتب في **الاتنين**، ويقرأ من name
+                    │  البودات القديمة شغالة عادي: name موجود
+                    ↓
+   ديبلوي ٢   الكود يقرأ من full_name، ولسه بيكتب في الاتنين
+                    │  وهنا تنقل الداتا القديمة (backfill)
+                    ↓
+   ديبلوي ٣   الكود يبطّل يكتب في name
+                    │  مفيش حد بيقرأ منه خلاص
+                    ↓
+   ديبلوي ٤   امسح name
+```
+
+**وكل خطوة آمنة لوحدها، وبينفع ترجع منها لوحدها** — وده هو المطلوب فعلاً.
+
+| آمن في خطوة واحدة | محتاج expand/contract |
+|:---|:---|
+| تضيف عمود nullable | **تغيّر اسم عمود** |
+| تضيف جدول أو index | **تمسح عمود** |
+| توسّع نوع (`int` → `bigint`) | **تضيّق نوع** |
+| تضيف قيمة افتراضية | تضيف `NOT NULL` من غير افتراضي |
+
+**واللي بيتقاس عليه:** إنك عارف إن **الديبلوي والـ schema خطين زمنيين
+مستقلين**، وإن الـ rolling update بيخليهم **يتقاطعوا**.
+
+واللي بيجاوب «نشغّل الـ migration في init container قبل النسخة الجديدة»
+**فوّت إن البودات القديمة لسه بتخدم** — وهي دي المشكلة كلها.
+:::
+:::
+
+:::q Your CI has a step that deploys to production. Someone opens a pull request from a fork. What could go wrong?
+**Secrets exposure and code execution with your credentials** — this is one
+of the most exploited CI weaknesses.
+
+Two specific dangers:
+
+| Trigger | Danger |
+|:---|:---|
+| `pull_request_target` | Runs in the **base repo's** context, with secrets, but checks out untrusted code if you are careless |
+| A workflow that checks out the PR head **and** has secrets | The PR author's code runs with your tokens |
+
+An attacker opens a PR that adds one line to a build script, your pipeline
+runs it with `secrets.AWS_ACCESS_KEY`, and it posts the key to their server.
+The build even goes green.
+
+**Defences, in order:**
+
+```yaml
+# 1. Least privilege by default, per workflow
+permissions:
+  contents: read        # not write, and no packages/id-token unless needed
+
+# 2. Pin third-party actions to a commit SHA, not a moving tag.
+#    A tag can be repointed at new code by whoever owns the action.
+- uses: actions/checkout@8f4b7f8  # v4.1.1
+
+# 3. Separate the pipelines: test on PRs (no secrets),
+#    deploy only from a push to main.
+on:
+  pull_request:          # test job only
+  push:
+    branches: [main]     # the job with deploy credentials
+```
+
+Plus `environment:` protection rules with required reviewers, and OIDC
+federation so there is no long-lived cloud key to steal at all.
+
+:::key The sentence that lands it
+"Untrusted code and production credentials must never be in the same job."
+That is the principle; everything else is an implementation of it.
+:::
+
+:::ar
+**تسريب الأسرار، وتشغيل كود غريب بصلاحياتك** — ودي من أكتر نقاط الضعف
+اللي بتتستغل في الـ CI.
+
+**السيناريو:**
+
+```diagram
+   حد بيفتح PR من fork
+        │
+        │  بيضيف سطر واحد في سكريبت البناء
+        ↓
+   البايبلاين بتاعتك بتشغّل السطر ده
+        │
+        │  ومعاها secrets.AWS_ACCESS_KEY
+        ↓
+   السطر بيبعت المفتاح لسيرفر الشخص ده
+        │
+        ↓
+   ✅ البناء أخضر. ومحدش لاحظ حاجة.
+```
+
+**والدفاعات بالترتيب:**
+
+```yaml
+# ١. أقل صلاحيات ممكنة، لكل workflow
+permissions:
+  contents: read       # مش write، ومفيش packages أو id-token غير لو محتاجهم
+
+# ٢. ثبّت الـ actions الخارجية على commit SHA مش على tag.
+#    التاج ممكن صاحب الـ action يحرّكه على كود جديد في أي وقت.
+- uses: actions/checkout@8f4b7f8   # v4.1.1
+
+# ٣. **افصل البايبلاينز**: تست على الـ PRs (من غير أسرار)،
+#    ونشر من الـ push على main بس.
+on:
+  pull_request:        # وظيفة التست بس
+  push:
+    branches: [main]   # الوظيفة اللي معاها صلاحيات النشر
+```
+
+وزود على كده قواعد الـ `environment:` بمراجعين إلزاميين، و **OIDC** عشان
+ميبقاش فيه مفتاح كلاود طويل الأجل يتسرق من الأصل.
+
+**والجملة اللي تحسم الإجابة:**
+
+> **«كود مش موثوق، وصلاحيات برودكشن — ممنوع يكونوا في نفس الـ job.»**
+
+ده هو المبدأ. وأي حاجة تانية مجرد تطبيق ليه.
+:::
+:::
+
+:::q Deploys take 40 minutes. Make them under 10 without reducing safety.
+Measure the stages first — then attack in the order the time actually is:
+
+| Suspect | Typical fix | Typical saving |
+|:---|:---|:---|
+| Tests run serially | Shard across parallel runners | Often 50–70% |
+| Dependencies re-downloaded | Cache keyed on the lockfile hash | Minutes per run |
+| Docker layers rebuilt | Registry-backed layer cache, ordered Dockerfile | Minutes |
+| Whole monorepo rebuilds | Build only changed packages from the dep graph | Large |
+| Sequential deploy per environment | Promote the same artifact, do not rebuild | 1 build instead of 3 |
+| Slow tests run first | Reorder cheapest-first, fail fast | Perceived, but real |
+
+:::warn The trap in the question
+They said **without reducing safety**. The tempting answer — "run tests in
+parallel and skip the slow ones" — trades away the property they explicitly
+asked you to keep.
+
+Say out loud that you are not going to reduce coverage, then find the time
+elsewhere. Candidates who quietly drop the integration suite have failed the
+question, not answered it.
+:::
+
+:::ar
+**قيس المراحل الأول**، وبعدين هات المشاكل بترتيب الوقت الحقيقي:
+
+| المشتبه فيه | الحل | التوفير المعتاد |
+|:---|:---|:---|
+| التستات على التوالي | وزّعها على runners متوازية | غالباً ٥٠–٧٠٪ |
+| الـ dependencies بتتنزّل كل مرة | كاش مفتاحه hash الـ lockfile | دقايق كل run |
+| طبقات دوكر بتتبني من الأول | layer cache على الـ registry | دقايق |
+| المونوريبو كله بيتبني | ابني المتغيّر بس من شجرة الاعتماديات | كبير |
+| نشر لكل بيئة على التوالي | رقّي نفس الـ artifact | بناء واحد بدل ٣ |
+| التستات البطيئة بتشتغل الأول | رتّب الأرخص الأول، افشل بسرعة | إحساس، بس حقيقي |
+
+**والفخ في السؤال:**
+
+هما قالوا **«من غير ما تقلّل الأمان»**.
+
+والإجابة المغرية — «نشغّل التستات بالتوازي **ونشيل البطيئة**» — بتبيع
+بالظبط الحاجة اللي هما طلبوا تحافظ عليها.
+
+**فقول بصريح العبارة إنك مش هتقلّل التغطية**، وبعدها دوّر على الوقت في
+حاجة تانية.
+
+واللي بيشيل الـ integration tests في سكوت، **ده فشل في السؤال مش جاوبه.**
+:::
+:::
+
+## Key takeaways
 
 ## Common problems
 
@@ -266,3 +713,18 @@ the only option that damages you.
   backwards-compatible.
 - **Fix or delete flaky tests.** They teach people to ignore red builds.
 - **Rollback must be one command**, and you must have practised it.
+- **Untrusted code and production credentials never share a job.**
+
+:::ar بالمصري · الخلاصة
+1. **CI = هو شغّال؟ CD = ينفع ينزل؟** مشكلتين مختلفتين، ومتخلطهمش.
+2. **ابني مرة واحدة ورقّي نفس الـ artifact.** البناء لكل بيئة **بيلغي
+   قيمة اختبارك كله**.
+3. **التاج = الـ commit SHA.** ثابت، وبيوصّلك للكود بالظبط.
+4. **استنى نتيجة الديبلوي واتأكد منها** — وإلا «الأخضر» مش معناه حاجة.
+   والبايبلاين اللي بتكدب أسوأ من مفيش بايبلاين.
+5. **الـ rolling update بيشغّل نسختين مع بعض**، فالـ migrations لازم
+   تبقى متوافقة للخلف. تغيير اسم عمود = ٤ ديبلويات.
+6. **صلّح أو امسح التستات المتخبّطة.** هي بتعلّم الفريق يتجاهل الأحمر.
+7. **الرجوع للخلف لازم يبقى أمر واحد**، **ولازم تكون جرّبته** قبل الأزمة.
+8. **كود مش موثوق + صلاحيات برودكشن = ممنوع في نفس الـ job.**
+:::

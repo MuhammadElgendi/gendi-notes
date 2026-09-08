@@ -1,6 +1,7 @@
 # Gendi Notes
 
-**A practical engineering reference for DevOps, SRE and Platform Engineering.**
+**A practical engineering reference for DevOps, SRE and Platform Engineering —
+bilingual, English and العامية المصرية.**
 
 Every topic answers the same three questions before anything else:
 
@@ -9,6 +10,36 @@ Every topic answers the same three questions before anything else:
 3. **How do you actually use it?** — real commands, real files, real output
 
 Then, and only then, how it works underneath and what goes wrong in production.
+
+---
+
+## Bilingual, on purpose
+
+English carries the **technical spine** — headings, commands, tables, output,
+the terms you will meet in the documentation and have to say in an interview.
+Egyptian Arabic carries the **teaching**: every section is explained again, from
+the beginning, in the language you think in.
+
+```markdown
+## What it is made of
+
+| Piece | What it is |
+|:---|:---|
+| Image | The built, read-only result |
+
+:::ar بالمصري · يعني إيه كل واحدة
+الـ **Image** ملف نايم على الديسك — مجمّد ومش بيتغير.
+والـ **Container** هو لما تشغّل الملف ده ويبقى عملية حية.
+:::
+```
+
+The Arabic is not a translation. It explains the same idea *again*, differently,
+and says the part the English left implicit — which is why both are worth
+reading. Technical terms stay in English throughout, deliberately.
+
+Every note also ends with an **Interview corner**: the questions that topic is
+actually asked, collapsed so the page works as a quiz before it works as a
+reference, and each answer says **what the interviewer is really testing**.
 
 ---
 
@@ -61,9 +92,11 @@ Hosting it permanently on your own server — domain, HTTPS, password,
 1. Renders every note into the site.
 2. **Regenerates `INDEX.md`** from the notes themselves — a hand-maintained
    index goes stale within a month; this one cannot.
-3. **Fails on a broken cross-reference** — an unknown `[[wikilink]]`, a
+3. **Fails on anything that would rot silently** — an unknown `[[wikilink]]`, a
    `related:` slug that does not resolve, a dead link, a duplicate slug, a
-   missing frontmatter field.
+   missing frontmatter field, an **unclosed `:::` block** (it swallows the rest
+   of the note, invisibly), or a **forbidden glyph in a diagram** (the U+25B6
+   triangles are missing from Consolas, so every box drifts out of alignment).
 
 ```bash
 node site/build.mjs --check     # lint only, no writes, exit 1 on error

@@ -50,7 +50,12 @@ function parseFrontmatter(raw, file) {
   const body = raw.slice(raw.indexOf("\n", end + 1) + 1);
   const data = {};
   let key = null;
-  for (const line of block.split("\n")) {
+  /* An inline [a, b, c] list is allowed to wrap across lines. Keyword lists
+     run long now that they carry Arabic search terms beside the English ones,
+     and a 140-character unbreakable line in the frontmatter is worse than
+     this fold. Brackets cannot nest here, so a non-greedy scan is enough. */
+  const folded = block.replace(/\[[^\]]*\]/g, m => m.replace(/\s*\n\s*/g, " "));
+  for (const line of folded.split("\n")) {
     if (!line.trim() || line.trim().startsWith("#")) continue;
     const bullet = line.match(/^\s*-\s+(.*)$/);
     if (bullet && key) { (data[key] ||= []).push(unquote(bullet[1])); continue; }
@@ -70,6 +75,22 @@ const unquote = s => s.replace(/^["']|["']$/g, "");
 /* ----------------------------------------------------------- 2. INLINE MD */
 const escapeHtml = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;")
                          .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/* BIDIRECTIONAL TEXT
+   These notes are bilingual: an English technical spine — headings, commands,
+   tables — with the teaching in Egyptian Arabic. Any block containing an
+   Arabic letter is marked dir="auto", so the browser resolves direction from
+   the block's first strong character. A table cell reading "صورة مجمّدة" then
+   right-aligns itself while the English cell beside it does not, with no
+   markup from the author. Blocks with no Arabic get no attribute at all. */
+/* Range endpoints are written as literal characters, not escapes, so the class
+   survives every editor and encoding round-trip. In hex they are:
+     0600-06FF Arabic · 0750-077F Supplement · 08A0-08FF Extended-A
+     FB50-FDFF Presentation Forms-A · FE70-FEFC Presentation Forms-B
+   Forms-B deliberately stops at FEFC, one short of FEFF, so a stray
+   byte-order mark never makes an English-only block look Arabic. */
+const ARABIC = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-ﻼ]/;
+const bidi = s => (ARABIC.test(s) ? ' dir="auto"' : "");
 
 function inline(text, ctx) {
   /* Rendered fragments park behind a NUL sentinel so later regexes cannot
@@ -116,12 +137,30 @@ const CALLOUTS = {
   warn:   { cls: "is-warn",   icon: "⚠",    label: "Watch out" },
   danger: { cls: "is-danger", icon: "\u{1F6A8}", label: "Common failure" },
   note:   { cls: "is-note",   icon: "\u{1F4D8}", label: "Going deeper" },
+  /* The Egyptian-Arabic explainer: the paragraph above, said again in the
+     language the reader thinks in. Rendered RTL in an Arabic face; code,
+     diagrams and command names inside it are forced back to LTR by the
+     stylesheet. See .callout.is-ar in app.css. */
+  ar:     { cls: "is-ar",     icon: "\u{1F4AC}", label: "بالمصري" },
 };
 
 const slugify = s => s.toLowerCase().trim()
   .replace(/[`*_~\[\]()]/g, "")
   .replace(/[^a-z0-9]+/g, "-")
   .replace(/^-+|-+$/g, "") || "section";
+
+/* Reads the body of a ::: block, honouring nesting, and reports the index of
+   the line after its closing fence. Shared by the callouts and by :::q. */
+function readDirective(lines, i) {
+  const buf = [];
+  let depth = 1;
+  while (i < lines.length) {
+    if (/^:::\s*\w+/.test(lines[i])) depth++;
+    else if (/^:::\s*$/.test(lines[i])) { depth--; if (!depth) break; }
+    buf.push(lines[i++]);
+  }
+  return { body: buf.join("\n"), end: i + 1 };
+}
 
 function renderBody(md, ctx, toc) {
   const lines = md.split("\n");
@@ -150,25 +189,40 @@ function renderBody(md, ctx, toc) {
       continue;
     }
 
+    /* :::q <question> — one interview question. The answer stays collapsed
+       until it is clicked, so an interview page can be worked through as a
+       quiz before it is read as a reference. <details> does this natively:
+       no JavaScript, and the answer still prints and still matches Ctrl-F
+       because the text is always in the DOM. */
+    const question = line.match(/^:::\s*q\s+(.+)$/);
+    if (question) {
+      const q = question[1].trim();
+      const read = readDirective(lines, i + 1);
+      i = read.end;
+      out.push(
+        `<details class="qa">` +
+        `<summary${bidi(q)}>${inline(q, ctx)}</summary>` +
+        `<div class="qa-answer">${renderBody(read.body, ctx, null)}</div>` +
+        `</details>`
+      );
+      continue;
+    }
+
     /* ::: callouts */
     const dir = line.match(/^:::\s*(\w+)\s*(.*)$/);
     if (dir && CALLOUTS[dir[1]]) {
       const spec = CALLOUTS[dir[1]];
       const custom = dir[2].trim();
-      const buf = [];
-      i++;
-      let depth = 1;
-      while (i < lines.length) {
-        if (/^:::\s*\w+/.test(lines[i])) depth++;
-        else if (/^:::\s*$/.test(lines[i])) { depth--; if (!depth) break; }
-        buf.push(lines[i++]);
-      }
-      i++;
+      const read = readDirective(lines, i + 1);
+      i = read.end;
+      /* dir/lang go on the aside itself: the label and the body both need to
+         flip, and lang lets the browser pick Arabic shaping and hyphenation. */
+      const rtl = dir[1] === "ar" ? ` dir="rtl" lang="ar-EG"` : "";
       out.push(
-        `<aside class="callout ${spec.cls}">` +
+        `<aside class="callout ${spec.cls}"${rtl}>` +
         `<span class="callout-icon" aria-hidden="true">${spec.icon}</span>` +
         `<span class="callout-label">${escapeHtml(custom || spec.label)}</span>` +
-        `<div class="callout-body">${renderBody(buf.join("\n"), ctx, null)}</div></aside>`
+        `<div class="callout-body">${renderBody(read.body, ctx, null)}</div></aside>`
       );
       continue;
     }
@@ -181,8 +235,8 @@ function renderBody(md, ctx, toc) {
       const rows = [];
       while (i < lines.length && /^\|/.test(lines[i])) rows.push(cells(lines[i++]));
       out.push(
-        `<div class="table-wrap"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead>` +
-        `<tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`
+        `<div class="table-wrap"><table><thead><tr>${head.map(h => `<th${bidi(h)}>${h}</th>`).join("")}</tr></thead>` +
+        `<tbody>${rows.map(r => `<tr>${r.map(c => `<td${bidi(c)}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`
       );
       continue;
     }
@@ -196,7 +250,7 @@ function renderBody(md, ctx, toc) {
       const id = slugify(text);
       if (toc && depth <= 3) toc.push({ level: depth, id, text: text.replace(/[`*]/g, "") });
       const anchor = depth <= 3 ? `<a class="anchor" href="#${id}" aria-label="Link to this section">#</a>` : "";
-      out.push(`<h${depth} id="${id}">${inline(text, ctx)}${anchor}</h${depth}>`);
+      out.push(`<h${depth} id="${id}"${bidi(text)}>${inline(text, ctx)}${anchor}</h${depth}>`);
       i++; continue;
     }
 
@@ -221,7 +275,7 @@ function renderBody(md, ctx, toc) {
         i++;
         while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !/^\s*([-*]|\d+\.)\s+/.test(lines[i]))
           t += " " + lines[i++].trim();
-        items.push(`<li>${inline(t, ctx)}</li>`);
+        items.push(`<li${bidi(t)}>${inline(t, ctx)}</li>`);
       }
       const tag = ordered ? "ol" : "ul";
       out.push(`<${tag}${checklist ? ' class="checklist"' : ""}>${items.join("")}</${tag}>`);
@@ -236,7 +290,7 @@ function renderBody(md, ctx, toc) {
     while (i < lines.length && lines[i].trim() &&
            !/^(#{1,4}\s|```|>|\s*[-*]\s|\s*\d+\.\s|\||:::|---$)/.test(lines[i]))
       buf.push(lines[i++]);
-    if (buf.length) out.push(`<p>${inline(buf.join(" "), ctx)}</p>`);
+    if (buf.length) out.push(`<p${bidi(buf.join(" "))}>${inline(buf.join(" "), ctx)}</p>`);
     else i++;
   }
   return out.join("\n");
@@ -254,6 +308,50 @@ function walk(dir, acc = []) {
 }
 
 const REQUIRED = ["title", "slug", "type", "domain", "level", "status", "updated"];
+
+/* An unclosed ::: block is invisible in the output and expensive to find:
+   readDirective simply consumes the rest of the file, so the note renders with
+   its whole tail swallowed into one callout and no error anywhere. Notes now
+   nest :::ar and :::q several deep, so this is checked like any broken link. */
+function checkDirectives(body, file) {
+  const stack = [];
+  let inFence = false;
+  body.split("\n").forEach((line, i) => {
+    if (/^```/.test(line)) { inFence = !inFence; return; }
+    if (inFence) return;
+    const open = line.match(/^:::\s*(\w+)/);
+    if (open) {
+      if (open[1] !== "q" && !CALLOUTS[open[1]])
+        err(file, `line ${i + 1}: unknown directive :::${open[1]}`);
+      else stack.push({ name: open[1], line: i + 1 });
+      return;
+    }
+    if (/^:::\s*$/.test(line)) {
+      if (!stack.length) err(file, `line ${i + 1}: closing ::: with nothing open`);
+      else stack.pop();
+    }
+  });
+  for (const s of stack)
+    err(file, `line ${s.line}: :::${s.name} is never closed — it swallows the rest of the note`);
+}
+
+/* CONTRIBUTING.md forbids the U+25B6 triangle arrows in diagrams: they are
+   absent from Consolas and Courier New, so the browser substitutes a glyph of
+   a different advance width and every box in the diagram drifts apart. The
+   rule was documented but not enforced, and 43 of them had accumulated. */
+const BAD_GLYPHS = { "▶": "→", "▼": "↓", "◀": "←", "▲": "↑", "►": "→", "◄": "←", "╌": "─" };
+
+function checkDiagrams(body, file) {
+  let inDiagram = false;
+  body.split("\n").forEach((line, i) => {
+    if (/^```/.test(line)) { inDiagram = /^```diagram/.test(line); return; }
+    if (!inDiagram) return;
+    for (const [bad, good] of Object.entries(BAD_GLYPHS))
+      if (line.includes(bad))
+        err(file, `line ${i + 1}: diagram uses "${bad}" — use "${good}" (U+2190 block); ` +
+                  `the triangles are missing from Consolas and break box alignment`);
+  });
+}
 
 function loadNotes() {
   const notes = [];
@@ -279,6 +377,9 @@ function loadNotes() {
     const expectedSlug = path.basename(file, ".md");
     if (data.slug && data.slug !== expectedSlug)
       err(relFile, `slug "${data.slug}" must match the filename "${expectedSlug}"`);
+
+    checkDirectives(body, relFile);
+    checkDiagrams(body, relFile);
 
     /* The lede: first blockquote under the H1, promoted to the page subtitle
        and the INDEX entry. Stripped from the body so it never renders twice. */

@@ -50,6 +50,15 @@
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas,
                "DejaVu Sans Mono", "Liberation Mono", Menlo, monospace;
 
+  /* Arabic: Inter has no Arabic coverage, so an Arabic block in --font-sans
+     falls back to whatever the OS picks — Times-ish on Windows, and the note
+     suddenly looks like a different document. Cairo is a Naskh-based UI face
+     that sits well beside Inter at the same size. The local names after it
+     are the good system Arabic faces, in order, for when the webfont is
+     blocked or the site is read offline. */
+  --font-ar: "Cairo", "Segoe UI", "Noto Naskh Arabic", "Geeza Pro",
+             "Tahoma", sans-serif;
+
   /* Diagrams: NO webfont, deliberately. Google Fonts subsets JetBrains Mono
      to Latin, so box-drawing glyphs (U+2500 block) fall back to another font
      with a different advance width and every box visibly breaks apart.
@@ -382,19 +391,23 @@ img, svg { max-width: 100%; height: auto; }
 /* body copy */
 .prose p { margin: 0 0 var(--s4); }
 .prose strong { font-weight: 650; color: var(--text); }
-.prose ul, .prose ol { margin: 0 0 var(--s4); padding-left: var(--s5); }
+/* Lists use logical inline properties throughout, not left/right. A list item
+   the renderer marked dir="auto" because it contains Arabic then carries its
+   own bullet over to the right-hand side and reads correctly, instead of
+   stranding the marker on the left with the text flung to the far margin. */
+.prose ul, .prose ol { margin: 0 0 var(--s4); padding-inline-start: var(--s5); }
 .prose li { margin-bottom: var(--s2); }
 .prose li > ul, .prose li > ol { margin: var(--s2) 0 0; }
-.prose ul { list-style: none; padding-left: var(--s4); }
-.prose ul > li { position: relative; padding-left: var(--s4); }
+.prose ul { list-style: none; padding-inline-start: var(--s4); }
+.prose ul > li { position: relative; padding-inline-start: var(--s4); }
 .prose ul > li::before {
-  content: ""; position: absolute; left: 2px; top: 0.68em;
+  content: ""; position: absolute; inset-inline-start: 2px; top: 0.68em;
   width: 5px; height: 5px; border-radius: 50%;
   background: var(--border-strong);
 }
 .prose ul.checklist > li::before {
   content: "✓"; background: none; color: var(--green);
-  width: auto; height: auto; top: 0; left: 0;
+  width: auto; height: auto; top: 0; inset-inline-start: 0;
   font-weight: 700; font-size: var(--fs-sm);
 }
 .prose hr { border: 0; border-top: 1px solid var(--border); margin: var(--s6) 0; }
@@ -465,7 +478,9 @@ img, svg { max-width: 100%; height: auto; }
   padding: var(--s4);
   margin: 0 0 var(--s4);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--border-strong);
+  /* Logical, not border-left: the Arabic callout is dir="rtl", and the accent
+     edge has to move to the right with the text or it points at nothing. */
+  border-inline-start: 3px solid var(--border-strong);
   border-radius: var(--r-md);
   background: var(--bg-subtle);
   font-size: var(--fs-base);
@@ -480,16 +495,98 @@ img, svg { max-width: 100%; height: auto; }
 .callout-body > :last-child { margin-bottom: 0; }
 .callout-body > :first-child { margin-top: 0; }
 
-.callout.is-tip     { background: var(--accent-subtle); border-color: var(--accent-border); border-left-color: var(--accent); }
+.callout.is-tip     { background: var(--accent-subtle); border-color: var(--accent-border); border-inline-start-color: var(--accent); }
 .callout.is-tip     .callout-label { color: var(--accent); }
-.callout.is-key     { background: var(--green-bg);  border-color: var(--green-border);  border-left-color: var(--green); }
+.callout.is-key     { background: var(--green-bg);  border-color: var(--green-border);  border-inline-start-color: var(--green); }
 .callout.is-key     .callout-label { color: var(--green); }
-.callout.is-warn    { background: var(--amber-bg);  border-color: var(--amber-border);  border-left-color: var(--amber); }
+.callout.is-warn    { background: var(--amber-bg);  border-color: var(--amber-border);  border-inline-start-color: var(--amber); }
 .callout.is-warn    .callout-label { color: var(--amber); }
-.callout.is-danger  { background: var(--red-bg);    border-color: var(--red-border);    border-left-color: var(--red); }
+.callout.is-danger  { background: var(--red-bg);    border-color: var(--red-border);    border-inline-start-color: var(--red); }
 .callout.is-danger  .callout-label { color: var(--red); }
-.callout.is-note    { background: var(--violet-bg); border-color: var(--violet-border); border-left-color: var(--violet); }
+.callout.is-note    { background: var(--violet-bg); border-color: var(--violet-border); border-inline-start-color: var(--violet); }
 .callout.is-note    .callout-label { color: var(--violet); }
+
+/* .is-ar — the Egyptian-Arabic explainer.
+   The renderer puts dir="rtl" lang="ar-EG" on the aside, which is what flips
+   the grid columns (icon to the right) and the accent edge. Everything here
+   is about making Arabic *legible*, not about direction:
+     · Arabic has no capitals and taller ascenders/descenders, so it needs a
+       larger size and a looser line than the same paragraph in Latin.
+     · Latin runs inside it — command names, `kubectl`, product names — are
+       handed back to the Latin stack so they do not render in a fallback.
+     · Code, diagrams and tables of commands are forced back to LTR: box art
+       mirrored right-to-left is unreadable, and a shell command is not text. */
+.callout.is-ar {
+  background: var(--cyan-bg);
+  border-color: var(--cyan-border);
+  border-inline-start-color: var(--cyan);
+  font-family: var(--font-ar);
+  font-size: var(--fs-md);
+  line-height: 2;
+}
+.callout.is-ar .callout-label {
+  color: var(--cyan);
+  /* Arabic is unicase: uppercasing does nothing and the tracking only pulls
+     the letters out of their joins. */
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--fs-sm);
+}
+.callout.is-ar code,
+.callout.is-ar kbd { font-family: var(--font-mono); line-height: 1.4; }
+.callout.is-ar strong { font-weight: 700; }
+.callout.is-ar .diagram,
+.callout.is-ar .code-block,
+.callout.is-ar pre { direction: ltr; text-align: left; }
+.callout.is-ar .table-wrap { direction: rtl; }
+
+/* ------------------------------------------------------ 8b. INTERVIEW Q&A */
+/* :::q renders a <details>. Collapsed by default so an interview page is a
+   quiz on the first pass and a reference on the second. No JavaScript: the
+   answer text is always in the DOM, so it prints and Ctrl-F finds it even
+   while it is visually closed. */
+.qa {
+  margin: 0 0 var(--s3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-subtle);
+  overflow: hidden;
+}
+.qa > summary {
+  display: flex;
+  gap: var(--s3);
+  align-items: baseline;
+  padding: var(--s3) var(--s4);
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  /* Kill the native triangle in every engine; ::before below replaces it,
+     because the native marker cannot be positioned or coloured. */
+  list-style: none;
+}
+.qa > summary::-webkit-details-marker { display: none; }
+.qa > summary::before {
+  content: "+";
+  flex: none;
+  width: 1.1em;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: var(--fs-md);
+  color: var(--accent);
+  text-align: center;
+}
+.qa[open] > summary::before { content: "\2212"; }   /* real minus, not hyphen */
+.qa > summary:hover { background: var(--bg-hover); }
+.qa > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.qa[open] > summary { border-bottom: 1px solid var(--border); }
+.qa-answer { padding: var(--s4) var(--s4) var(--s2); background: var(--bg); }
+.qa-answer > :last-child { margin-bottom: var(--s2); }
+/* Callouts nest inside answers constantly — the model answer, then what the
+   interviewer is really testing. Tighten them so a card stays scannable. */
+.qa-answer .callout { margin-bottom: var(--s3); }
 
 /* --------------------------------------------------------------- 9. TABLES */
 .table-wrap {
@@ -506,7 +603,10 @@ img, svg { max-width: 100%; height: auto; }
 }
 .prose th, .prose td {
   padding: var(--s3) var(--s4);
-  text-align: left;
+  /* start, not left: a cell the renderer marked dir="auto" for its Arabic
+     aligns to its own reading edge, so an Arabic column right-aligns as a
+     column instead of hugging the English one beside it. */
+  text-align: start;
   vertical-align: top;
   border-bottom: 1px solid var(--border);
 }
@@ -516,6 +616,15 @@ img, svg { max-width: 100%; height: auto; }
   color: var(--text-muted);
   background: var(--bg-subtle);
   white-space: nowrap;
+}
+/* Arabic is unicase and cursive: uppercase does nothing, and the tracking
+   above pulls the letters out of their joins. dir="auto" is present only when
+   the renderer found an Arabic letter, so this targets exactly those headers. */
+.prose th[dir="auto"] {
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: var(--fs-sm);
+  white-space: normal;
 }
 .prose tbody tr:last-child td { border-bottom: 0; }
 .prose tbody tr:hover { background: var(--bg-subtle); }
@@ -650,8 +759,12 @@ a.card:hover {
   .content { padding: 0; }
   .prose { max-width: none; }
   body { background: #fff; color: #000; font-size: 10.5pt; }
-  .callout, .diagram, pre, .table-wrap, tr { break-inside: avoid; }
+  .callout, .diagram, pre, .table-wrap, tr, .qa { break-inside: avoid; }
   .prose h2, .prose h3 { break-after: avoid; }
+  /* A printed quiz with every answer hidden is a stack of blank cards, so
+     override the UA rule that collapses a closed <details>. */
+  .qa > summary::before { content: "Q "; }
+  .qa-answer { display: block !important; border-top: 1px solid #ccc; }
   a { color: #000; text-decoration: none; }
   .prose a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 8pt; color: #555; }
 }
