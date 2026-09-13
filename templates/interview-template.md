@@ -65,7 +65,7 @@ Group them under `###` headings by sub-area, so the on-page contents is usable.
 
 ### <Sub-area>
 
-:::q <The question, phrased as an interviewer would say it> · <والسؤال بالمصري>
+:::q <The question, phrased as an interviewer would say it> · <والسؤال بالعربي>
 The model answer. Lead with the claim, then the mechanism, then the
 consequence. Keep it to what a person could actually say out loud in under
 two minutes.
@@ -86,13 +86,13 @@ page — a candidate can know the fact and still fail the question.
 :::
 
 :::ar
-الإجابة تاني بالمصري: الخلاصة الأول، وبعدين الميكانيزم، وبعدين النتيجة.
+الإجابة تاني بالعربي: الخلاصة الأول، وبعدين الميكانيزم، وبعدين النتيجة.
 
 **واللي بيتقاس عليه فعلاً:** …
 :::
 :::
 
-:::q <Next question> · <بالمصري>
+:::q <Next question> · <بالعربي>
 …
 :::
 
@@ -116,7 +116,7 @@ row should name the mistake **and** what to do instead.
 - Five to seven bullets. Make them about **how to think**, not facts to recall
   — the facts are in the cards above.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. …
 2. …
 :::

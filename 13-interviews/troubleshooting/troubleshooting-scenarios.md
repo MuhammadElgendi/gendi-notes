@@ -106,7 +106,7 @@ down. Seniors restore service, *then* investigate — and say so explicitly,
 because it is a judgement call the interviewer is listening for.
 :::
 
-:::ar بالمصري · المنهج قبل السيناريوهات
+:::ar المنهج قبل السيناريوهات
 اتعلّم الشكل ده، وكل سيناريو تحت بيبقى مجرد **حالة** منه.
 
 **١. إيه اللي اتغير؟** ديبلوي؟ إعداد؟ شهادة؟ DNS؟ الترافيك؟ الـ quota؟
@@ -756,7 +756,7 @@ stale reads" is a senior answer; "yes, let's add replicas" is not.
 - **Measure before scaling.** "Add replicas" and "add nodes" are answers to
   specific measurements, not to slowness.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **إيه اللي اتغير ← قد إيه ← أنهي طبقة ← اثبتها ← وقّف الدم.**
    كل سيناريو فوق مجرد حالة من ده.
 2. **«محدش نشر» مش «مفيش حاجة اتغيرت».** الشهادات والـ cron والتوكنز

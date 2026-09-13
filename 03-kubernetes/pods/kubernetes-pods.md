@@ -93,7 +93,7 @@ Two consequences:
   a conflict, exactly as it would be on one machine.
 :::
 
-:::ar بالمصري · ليه بيتشاركوا `localhost`؟
+:::ar ليه بيتشاركوا `localhost`؟
 فيه كونتينر مخبّي إنت عمرك ما شوفته اسمه **pause container**.
 
 هو بيقوم **الأول**، وبيمسك الـ network namespace (يعني الشبكة بتاعة البود)،
@@ -277,7 +277,7 @@ volumes:
 ```
 :::
 
-:::ar بالمصري · البودات بتتخلق عشان تموت، صمّم على الأساس ده
+:::ar البودات بتتخلق عشان تموت، صمّم على الأساس ده
 فيه فرق لازم تفهمه بين حاجتين الناس بتخلط بينهم:
 
 ```diagram
@@ -493,7 +493,7 @@ failure.
 - With multiple containers, `logs` and `exec` need **`-c <name>`**.
 - Second container only if it must share the pod's network or filesystem.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **الـ Pod كونتينر أو أكتر بيتشاركوا IP وملفات**، وعلى نود واحدة دايماً.
 2. **بيكلّموا بعض على `localhost`**، ومش ينفع اتنين ياخدوا نفس البورت.
 3. **الـ init containers بتخلص الأول** — دي الأداة الصح لو محتاج ترتيب.

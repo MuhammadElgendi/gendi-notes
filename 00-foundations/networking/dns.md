@@ -50,7 +50,7 @@ No single server knows every name. Each level only knows who to ask next.
 
 The resolver does the work; your machine just asks it once.
 
-:::ar بالمصري · إيه هو الـ DNS، وإزاي بيشتغل
+:::ar إيه هو الـ DNS، وإزاي بيشتغل
 الـ DNS هو **دفتر التليفونات بتاع الإنترنت**. إنت بتكتب `api.example.com`،
 وهو بيرجّعلك `93.184.216.34`، والبراوزر بيتصل على الرقم ده.
 
@@ -145,7 +145,7 @@ The sequence is: lower TTL → wait one old-TTL period → change the record →
 verify → raise the TTL back.
 :::
 
-:::ar بالمصري · الـ TTL هو التحكّم الوحيد اللي عندك
+:::ar الـ TTL هو التحكّم الوحيد اللي عندك
 كل ريكورد معاه رقم بالثواني اسمه **TTL** (time to live)، ومعناه: **الـ
 resolvers مسموحلهم يخزّنوا الإجابة دي كاش قد إيه**.
 
@@ -215,7 +215,7 @@ chain — not in DNS. Reaching for `dig` first is the most common wasted hour in
 DNS debugging. **Compare the two.**
 :::
 
-:::ar بالمصري · `dig` بيشتغل والتطبيق بيفشل؟ دي مش لُغز، دي **تشخيص**
+:::ar `dig` بيشتغل والتطبيق بيفشل؟ دي مش لُغز، دي **تشخيص**
 دي أهم حاجة عملية في الصفحة كلها. ركّز فيها.
 
 **الأدوات التلاتة مش نفس الحاجة**، وده بيت القصيد:
@@ -312,7 +312,7 @@ self-inflicted, by the impatient check you ran a minute earlier. Create the
 record first, then look.
 :::
 
-:::ar بالمصري · الكاش السلبي — إنك تشيك بدري هو اللي **بيعمل** المشكلة
+:::ar الكاش السلبي — إنك تشيك بدري هو اللي **بيعمل** المشكلة
 دي غريبة وبتوقّع كل الناس، وأنت اللي بتعمل المشكلة بإيدك من غير ما تعرف.
 
 **اللي بيحصل:**
@@ -613,7 +613,7 @@ nothing while `www` keeps working.
 - **DNS is a poor failover mechanism.** Many clients ignore the TTL entirely;
   put a load balancer with a stable address in front instead.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **الـ DNS هرم كاش مفيهوش إلغاء.** مش تقدر تسحب إجابة، تقدر بس تستنى
    الـ TTL يخلص.
 2. **نزّل الـ TTL مدة TTL قديم كاملة قبل** ما تنقل أي حاجة.

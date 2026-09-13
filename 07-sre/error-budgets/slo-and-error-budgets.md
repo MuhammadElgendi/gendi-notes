@@ -75,7 +75,7 @@ An error budget replaces opinion with arithmetic:
 | The careful engineer is "blocking" | The policy blocks, not a person |
 | 100% is implicitly the target | The target is explicit and affordable |
 
-:::ar بالمصري · دي موجودة عشان تحسم خلاف، مش عشان تقيس
+:::ar دي موجودة عشان تحسم خلاف، مش عشان تقيس
 الفكرة الحقيقية **مش القياس**. الفكرة إنك **تحسم خلاف قبل ما يحصل**.
 
 كل فريق فيه نفس الخِلاف المتكرر: ناس عايزة تنشر بسرعة، وناس عايزة تاخد
@@ -133,7 +133,7 @@ notices**.
 | Uptime of the VM | The VM is up, the app returns 500 | Successful requests ÷ valid requests |
 | Ping succeeds | Proves routing, not service | An actual request to a real endpoint |
 
-:::ar بالمصري · الأرقام دي بالوقت الحقيقي
+:::ar الأرقام دي بالوقت الحقيقي
 | الـ SLO | التوقف في الشهر | في السنة | إحساسه |
 |:---|:---|:---|:---|
 | ٩٩٪ | ٧.٣ **ساعة** | ٣.٦٥ يوم | بتحس بيه كل أسبوع |
@@ -203,7 +203,7 @@ blip from paging anyone. Either alone is wrong: short-only pages constantly,
 long-only sleeps through an outage.
 :::
 
-:::ar بالمصري · الـ burn rate — إزاي تعمل تنبيهات مش بتضايقك
+:::ar الـ burn rate — إزاي تعمل تنبيهات مش بتضايقك
 **إنك تعمل تنبيه على «الـ SLO اتكسر» ده بلا فايدة** — عشان لما التنبيه
 يوصلك، الحكاية خلصت خلاص.
 
@@ -422,7 +422,7 @@ budget was designed to absorb.
 - **100% is a category error.** With no allowed downtime you can never deploy
   or patch, which makes the service less safe.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **الـ SLI بيقيس، والـ SLO هدف، والـ SLA بيكلّف فلوس.** والـ SLO لازم
    يكون **أضيق** من الـ SLA.
 2. **SLO من غير سياسة مش بيغيّر حاجة.** اكتب «وبعدين إيه؟» **قبل** ما

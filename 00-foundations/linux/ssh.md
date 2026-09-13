@@ -47,7 +47,7 @@ There are two ways in, and only one of them is acceptable on a server.
 The private key never travels. That is the whole point — nothing worth stealing
 crosses the network.
 
-:::ar بالمصري · الـ key pair دي إزاي بتشتغل؟
+:::ar الـ key pair دي إزاي بتشتغل؟
 فيه طريقتين تدخل بيهم سيرفر، وواحدة بس منهم مقبولة.
 
 **الباسورد:** إنت بتكتب سر وبيمشي على الشبكة. ده ممكن يتخمّن، وممكن حد
@@ -168,7 +168,7 @@ ordering problem. `IdentitiesOnly yes` with an explicit `IdentityFile` sends
 exactly one key and removes the whole class of failure.
 :::
 
-:::ar بالمصري · ملف `~/.ssh/config` — اعمله من أول يوم
+:::ar ملف `~/.ssh/config` — اعمله من أول يوم
 ده الفرق بين إنك تحفظ أوامر طويلة، وإنك تكتب كلمة واحدة.
 
 **من غيره:**
@@ -279,7 +279,7 @@ ssh -J bastion final-host        # or ProxyJump in ~/.ssh/config
 ```
 :::
 
-:::ar بالمصري · الـ agent، و ليه `-A` خطر
+:::ar الـ agent، و ليه `-A` خطر
 **الـ agent** برنامج صغير شغّال في جلستك، بيمسك مفاتيحك **مفتوحة** عشان
 متكتبش الـ passphrase كل مرة.
 
@@ -673,7 +673,7 @@ Host that-one-server
 - **`ssh -v`** when authentication fails; it shows exactly which key was
   refused.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **مفاتيح، مش باسوردات.** المفتاح الخاص عمره ما بيسيب جهازك.
 2. **`~/.ssh/config`** بيحوّل الأوامر الطويلة لـ `ssh prod`. **اعمله من
    أول يوم**، مش بعدين.

@@ -53,7 +53,7 @@ The logs you want belong to the container that **died**:
 `kubectl logs <pod> --previous`.
 :::
 
-:::ar بالمصري · الأربع أوامر دول بالترتيب، ومتقلبهمش
+:::ar الأربع أوامر دول بالترتيب، ومتقلبهمش
 الصفحة دي للحظة اللي حاجة بايظة وإنت مش عارف تبدأ منين. **ابدأ من هنا،
 وبنفس الترتيب ده كل مرة.**
 
@@ -246,7 +246,7 @@ Use a **startupProbe** for slow starters; it holds liveness off until the app is
 up, instead of you having to weaken liveness permanently.
 :::
 
-:::ar بالمصري · `CrashLoopBackOff` **مش** نوع مشكلة
+:::ar `CrashLoopBackOff` **مش** نوع مشكلة
 دي أول حاجة لازم تصححها في دماغك. `CrashLoopBackOff` **مش خطأ**.
 
 معناها حرفياً: **«الكونتينر بيقفل على طول، فأنا بأبطّأ في إعادة تشغيله»**.
@@ -309,7 +309,7 @@ kubectl debug <pod> -it --copy-to=debug --container=<name> -- sh
 kubectl debug -it <pod> --image=busybox --target=<container>
 ```
 
-:::ar بالمصري · الكونتينر بيموت بسرعة ومش لاحق تدخله
+:::ar الكونتينر بيموت بسرعة ومش لاحق تدخله
 مشكلة كلاسيكية: عايز تعمل `kubectl exec` وتبص جوه، بس الكونتينر بيموت في
 ثانية فمش لاحق.
 
@@ -425,7 +425,7 @@ kubectl run tmp --rm -it --image=busybox --restart=Never -- nslookup <service>
 kubectl get networkpolicy -A
 ```
 
-:::ar بالمصري · «شغّال» بس مش شغّال
+:::ar «شغّال» بس مش شغّال
 البود قايم، والترافيك مش بيوصل. **الترتيب ده بيقسّم المشكلة نصين في كل خطوة:**
 
 ```diagram
@@ -742,7 +742,7 @@ kubectl delete pod <pod> --grace-period=0 --force
 - `<none>` endpoints = selector mismatch or pods not Ready.
 - **`kubectl debug --copy-to`** inspects a pod that dies too fast to exec into.
 
-:::ar بالمصري · الخلاصة (دي اللي تقراها الساعة ٣ الفجر)
+:::ar الخلاصة (دي اللي تقراها الساعة ٣ الفجر)
 1. **`describe` ← `logs --previous` ← `get endpoints`.** بالترتيب ده.
 2. **قسم Events في الـ `describe`** بيكتبلك المشكلة بالكلام في أغلب الحالات.
 3. **`CrashLoopBackOff` سياسة مش سبب.** هات **كود الخروج**.

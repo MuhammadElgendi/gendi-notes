@@ -111,7 +111,7 @@ as the network, leaving the rest for hosts.
    Rule of thumb: bigger number = smaller network.
 ```
 
-:::ar بالمصري · الـ `/24` دي معناها إيه؟
+:::ar الـ `/24` دي معناها إيه؟
 الرقم اللي بعد الشلاطة اسمه **CIDR**، ومعناه: **كام bit ثابتين كعنوان
 للشبكة**، والباقي للأجهزة.
 
@@ -232,7 +232,7 @@ container is unreachable even with `-p` mapping, because the port mapping
 arrives on the container's external interface. Bind to `0.0.0.0` in containers.
 :::
 
-:::ar بالمصري · دي أشهر «ليه مش بيتصل؟» في الدنيا
+:::ar دي أشهر «ليه مش بيتصل؟» في الدنيا
 السيرفيس شغّال، والبورت صح، والفايروول مفتوح — **والاتصال من بره لسه بيفشل**.
 
 السبب إن البرنامج سامع على **loopback بس**، يعني على نفسه، فهو **عمره ما
@@ -322,7 +322,7 @@ group or network ACL, not the server itself.
 Getting these two backwards sends people to debug the wrong layer for hours.
 :::
 
-:::ar بالمصري · `refused` و `timeout` معناهم **العكس**
+:::ar `refused` و `timeout` معناهم **العكس**
 دي أهم تفصيلة في الصفحة، وأكتر حاجة بتضيّع وقت الناس لما تتلخبط.
 
 ```diagram
@@ -410,7 +410,7 @@ sudo ufw status                       # if ufw is installed
 sudo iptables -L INPUT -n --line-numbers   # if it is not
 ```
 
-:::ar بالمصري · على أي سيرفر كلاود فيه **فايروولين** مش واحد
+:::ar على أي سيرفر كلاود فيه **فايروولين** مش واحد
 دي بتوقّع كل حد مرة على الأقل في حياته، فخد بالك منها من الأول.
 
 ```diagram
@@ -630,7 +630,7 @@ immediately instead of completing the handshake.
   layer.
 - Large transfers hanging while small ones work is **MTU**, not bandwidth.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **الاتصال = عنوان + بورت.** غلط في واحد منهم، مفيش حاجة تشتغل.
 2. **`refused` = مفيش حاجة سامعة. `timeout` = فايروول.** **مشكلتين
    مختلفتين تماماً**، واللي بيعكسهم بيضيّع ساعات.

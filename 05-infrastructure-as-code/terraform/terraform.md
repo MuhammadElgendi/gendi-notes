@@ -82,7 +82,7 @@ Therefore:
 - Anyone who can read state has the credentials of everything in it.
 :::
 
-:::ar بالمصري · الـ State هي الحاجة اللي لازم تفهمها
+:::ar الـ State هي الحاجة اللي لازم تفهمها
 تيرافورم كل شغلته إنه يقارن **تلات أعمدة**:
 
 ```diagram
@@ -227,7 +227,7 @@ someone typing `yes` without reading. When you see `-/+` on anything stateful,
 stop and work out why.
 :::
 
-:::ar بالمصري · قراءة الـ plan هي أهم مهارة في تيرافورم كله
+:::ar قراءة الـ plan هي أهم مهارة في تيرافورم كله
 الـ `plan` بيقولك **بالظبط** هو هيعمل إيه، **قبل** ما يعمله. وأربع رموز
 بس محتاج تعرفهم:
 
@@ -426,7 +426,7 @@ Split by **how often things change** and **who owns them**, not by resource
 type. A VPC that changes twice a year does not belong in the same state as
 applications that deploy hourly.
 
-:::ar بالمصري · دائرة الانفجار — قسّم الـ state
+:::ar دائرة الانفجار — قسّم الـ state
 **state واحدة = دائرة انفجار واحدة.** كل حاجة جواها ممكن تتدمّر بـ apply
 واحد غلط، وكل apply بيقفل عليها كلها.
 
@@ -700,7 +700,7 @@ terraform force-unlock <LOCK_ID>
 - **Bucket versioning today.** It is the difference between an inconvenience and
   a disaster.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **كود ← plan ← apply.** واقرا الـ plan **كل مرة**.
 2. **`-/+` معناها امسح واعمل من الأول.** على داتابيز، دي **ضياع داتا**.
 3. **الـ state بتربط كودك بالموارد الحقيقية**، وفيها **أسرار مكتوبة

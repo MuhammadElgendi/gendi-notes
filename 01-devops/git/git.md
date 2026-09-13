@@ -59,7 +59,7 @@ That is the whole purpose. Without it, every commit would have to include
 everything you had touched.
 :::
 
-:::ar بالمصري · أربع أماكن، وكل لخبطة في جيت سببها إنك مش عارف إنت فين
+:::ar أربع أماكن، وكل لخبطة في جيت سببها إنك مش عارف إنت فين
 دي أهم صورة في الصفحة. **لو حفظتها، جيت بيبطّل يكون مربك.**
 
 ```diagram
@@ -205,7 +205,7 @@ The rule: rebase your **own unpushed** work freely, to tidy it before sharing.
 Once it is pushed and others may have pulled it, merge instead.
 :::
 
-:::ar بالمصري · merge ولا rebase؟
+:::ar merge ولا rebase؟
 الاتنين بيجيبوا شغل برانش تانية لبرانشك. **والفرق في شكل التاريخ اللي
 بيطلع.**
 
@@ -292,7 +292,7 @@ If the commit is already pushed, use `revert`. Using `reset` then forcing a push
 rewrites history under your colleagues' feet.
 :::
 
-:::ar بالمصري · التراجع — اختار على أساس إنت عايز ترجّع إيه
+:::ar التراجع — اختار على أساس إنت عايز ترجّع إيه
 **الجدول ده أهم جدول في الصفحة**، عشان الاختيار الغلط هنا هو اللي الشغل
 بيضيع بسببه.
 
@@ -664,7 +664,7 @@ git bisect run npm test        # أي exit مش صفر معناه "باظ"
 - **`git reflog`** finds commits you thought you destroyed.
 - **`git bisect run`** finds the commit that broke it, automatically.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **أربع أماكن:** ملفاتك ← staging ← التاريخ المحلي ← الريموت.
    و **`git status`** بيقولك إنت فين. شغّله على طول.
 2. **البرانشات مجرد مؤشرات.** عملها مجاني، فمتبخلش على نفسك.

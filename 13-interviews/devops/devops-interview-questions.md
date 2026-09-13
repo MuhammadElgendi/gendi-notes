@@ -88,7 +88,7 @@ one people prepare least. It is also the only round where **saying "I don't
 know yet, here is how I would find out" scores higher than a confident guess.**
 :::
 
-:::ar بالمصري · إنت في أنهي أوضة؟
+:::ar إنت في أنهي أوضة؟
 الانترفيو للمستوى المتقدم عادةً خمس مقابلات، وكل واحدة بتتقاس بمعيار مختلف.
 وأهم حاجة إنك **تعرف إنت في أنهي واحدة**، عشان الإجابة الصح في أوضة تبقى
 غلط في أوضة تانية.
@@ -133,7 +133,7 @@ blast radius out loud, in this order:
                                (say this part out loud — seniors do)
 ```
 
-:::ar بالمصري · المنهج ده يشيلك في أي سؤال debugging
+:::ar المنهج ده يشيلك في أي سؤال debugging
 لما يسلّمك سيستم باظ، **متبدأش تسمّي أدوات**. أسوأ حاجة تعملها إنك تقول
 «هبص في الـ Grafana» — دي إجابة فاضية.
 
@@ -775,7 +775,7 @@ mechanism, then use it" — and then actually answer the question asked.
 - **Rehearse out loud.** Reading an answer and being able to say it are
   different skills, and only one of them is in the room with you.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 - **السؤال مجرد ذريعة.** كل سؤال متقدم معناه الحقيقي «إنت بتقرر إزاي؟».
   جاوب على ده تبقى جاوبت على السؤال.
 - **اسأل قبل ما تصمّم.** الحجم والقيود بيغيّروا الإجابة، وإنك تختار من غير

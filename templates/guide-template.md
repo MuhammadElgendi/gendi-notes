@@ -62,7 +62,7 @@ nouns — which one am I actually touching right now?"
 The single distinction that removes the most confusion about this tool.
 :::
 
-:::ar بالمصري · يعني إيه كل واحدة
+:::ar يعني إيه كل واحدة
 | الحاجة | يعني إيه | تخيلها زي |
 |:---|:---|:---|
 | … | … | … |
@@ -132,7 +132,7 @@ Three to six questions this topic is actually asked. Delete the section if you
 have nothing beyond the note itself — a padded interview corner is worse than
 none.
 
-:::q <The question, as an interviewer would say it> · <والسؤال بالمصري>
+:::q <The question, as an interviewer would say it> · <والسؤال بالعربي>
 The model answer. Lead with the claim, then the mechanism.
 
 :::key What is really being tested
@@ -141,7 +141,7 @@ the card.
 :::
 
 :::ar
-الإجابة تاني بالمصري، وبنفس الترتيب: الخلاصة الأول، وبعدين الميكانيزم.
+الإجابة تاني بالعربي، وبنفس الترتيب: الخلاصة الأول، وبعدين الميكانيزم.
 
 واللي بيتقاس عليه في السؤال ده: …
 :::
@@ -152,7 +152,7 @@ the card.
 - Five to seven bullets that make sense on their own, six months later.
 - Lead with the thing you would most want to be reminded of.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. …
 2. …
 :::

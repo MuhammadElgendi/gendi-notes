@@ -66,7 +66,7 @@ A metric is a number with labels, sampled over time. That is a much smaller
 thing to store than a log line, which is why you can afford to keep it long
 enough to compare against last month.
 
-:::ar بالمصري · الفرق بين اللوجز والمقاييس
+:::ar الفرق بين اللوجز والمقاييس
 دي نقطة الناس بتلخبط فيها، وبتحاول تستخدم واحدة مكان التانية.
 
 **اللوجز** بيقولوك حصل إيه في **ريكوست واحد**. **والمقاييس** بيقولوك
@@ -128,7 +128,7 @@ counter drops to 0, and `rate()` knows that is a restart rather than a
 negative rate. Computing this yourself with subtraction does not.
 :::
 
-:::ar بالمصري · أنواع المقاييس، واختيار الغلط منهم
+:::ar أنواع المقاييس، واختيار الغلط منهم
 | النوع | بيتحرّك إزاي | بتستخدمه لإيه | بتسأله بإيه |
 |:---|:---|:---|:---|
 | **Counter** | **لفوق بس** (أو يرجع صفر) | ريكوستات، أخطاء، بايتات — حاجة **بتتراكم** | `rate()` |
@@ -326,7 +326,7 @@ topk(10, count by (__name__)({__name__=~".+"}))
 ```
 :::
 
-:::ar بالمصري · الـ cardinality هي اللي بتقتل بروميثيوس فعلاً
+:::ar الـ cardinality هي اللي بتقتل بروميثيوس فعلاً
 دي أهم حاجة في الصفحة، وأشهر طريقة بروميثيوس بيموت بيها في الشغل.
 
 **كل تركيبة مختلفة من قيم الـ labels = سلسلة زمنية منفصلة، متخزّنة في
@@ -573,7 +573,7 @@ loud because it connects two areas.
 - **Metrics say *that* something is wrong; logs and traces say *what*.** Use
   all three for what each is good at.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **بروميثيوس بيجيب (pull) مش بيستقبل.** وده بيديك `up` مجاناً، وده
    سبب إن الـ jobs القصيرة محتاجة Pushgateway.
 2. **قيمة الـ counter مالهاش معنى — الـ `rate()` بتاعته هو المقياس.**

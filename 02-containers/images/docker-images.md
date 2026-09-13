@@ -54,7 +54,7 @@ Pulling the tenth downloads only its unique layers.
 later one is still present in the earlier layer, and anyone with the image can
 extract it.
 
-:::ar بالمصري · الـ image مش ملف واحد، دي **طبقات**
+:::ar الـ image مش ملف واحد، دي **طبقات**
 دي الحقيقة الوحيدة اللي لو فهمتها، تلات حاجات بيتفسّروا فوراً: الكاش،
 والحجم، وليه السيكرت اللي مسحته لسه موجود.
 
@@ -246,7 +246,7 @@ A good CI convention: tag with the commit SHA, and additionally move a
 `latest`/`stable` label if humans need one.
 :::
 
-:::ar بالمصري · `latest` **مش** معناها الأحدث
+:::ar `latest` **مش** معناها الأحدث
 دي أشهر لخبطة في دوكر كله، وسؤال انترفيو متكرر.
 
 `latest` **مجرد استيكر**، حد بيلزقه بإيده على أي صورة. مفيش أي حاجة في
@@ -357,7 +357,7 @@ If a secret has already been pushed: **rotate the secret**. Rewriting the image
 does not help — it may already have been pulled.
 :::
 
-:::ar بالمصري · السيكرت اللي دخل طبقة، دخل للأبد
+:::ar السيكرت اللي دخل طبقة، دخل للأبد
 ```dockerfile
 COPY .env /app/.env       ← طبقة ١: الملف اتحفظ هنا
 RUN rm /app/.env          ← طبقة ٢: علامة "مش موجود" بس
@@ -605,7 +605,7 @@ mark of experience.
 - **`docker history`** finds the layer that made your image huge.
 - Add **`USER`** — do not run as root.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **الصورة طبقات بتتراكم وبس.** مفيش حاجة بتتشال فعلاً منها.
 2. **رتّب الـ Dockerfile: الأقل تغيّراً فوق.** الـ dependencies قبل الكود.
 3. **الـ multi-stage** بتشيل الكومبايلر من البرودكشن — وعادةً بتصغّر

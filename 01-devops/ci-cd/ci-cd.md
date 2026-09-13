@@ -11,7 +11,8 @@ keywords: [continuous integration, continuous delivery, pipeline,
 level: 2
 status: stable
 prerequisites: [git, docker]
-related: [docker-images, terraform, devops-interview-questions]
+related: [docker-images, terraform, jenkins, gitops, helm,
+          devops-interview-questions]
 updated: 2026-09-08
 ---
 
@@ -133,7 +134,7 @@ through each environment. Configuration changes between environments; the
 artifact does not.
 :::
 
-:::ar بالمصري · **ابني مرة واحدة، ورقّي نفس الحاجة**
+:::ar **ابني مرة واحدة، ورقّي نفس الحاجة**
 دي أهم قاعدة في البايبلاين كلها، وأشهر غلطة معمارية في نفس الوقت.
 
 **الغلط:**
@@ -172,6 +173,85 @@ artifact does not.
 
 **وده معناه:** لما تختبر على staging وتنجح، إنت **فعلاً** اختبرت البايتات
 اللي هتشتغل في البرودكشن. وده الغرض كله.
+:::
+
+## The tool landscape
+
+Every tool here runs the same shape — trigger, stages, artefact, deploy. They
+differ in **who operates them** and **which direction the deploy goes**.
+
+```diagram
+   CI TOOLS  (build and test)          CD TOOLS  (get it running)
+   ─────────────────────────           ──────────────────────────
+   GitHub Actions                      Argo CD      ┐
+   GitLab CI                           Flux         ├ PULL: agent in the
+   Jenkins                                          ┘ cluster reads Git
+   CircleCI · Buildkite
+   Azure Pipelines                     the CI tool itself  ┐ PUSH: pipeline
+   Tekton                              Spinnaker           ┘ holds cluster
+                                                             credentials
+   Many tools do both. The PUSH/PULL split is the decision that matters.
+```
+
+| Tool | Hosted by | Config | Strongest when | Watch out for |
+|:---|:---|:---|:---|:---|
+| **GitHub Actions** | GitHub | `.github/workflows/` | You are already on GitHub | Third-party actions are a supply-chain risk — pin to SHAs |
+| **GitLab CI** | GitLab or you | `.gitlab-ci.yml` | You are on GitLab; it is deeply integrated | Ties you to GitLab |
+| **[Jenkins](jenkins.md)** | **You** | `Jenkinsfile` | Self-hosting is required; huge plugin ecosystem | You operate it — plugins, disk, CVEs |
+| **CircleCI / Buildkite** | Them (Buildkite: your agents) | YAML | Fast, good caching; Buildkite keeps code on your infra | Per-minute cost |
+| **Azure Pipelines** | Microsoft | YAML | Azure and enterprise Windows estates | Azure-centric |
+| **Tekton** | You, on Kubernetes | CRDs | You want CI *as* Kubernetes objects | Low-level; usually needs a UI on top |
+| **[Argo CD](gitops.md) / Flux** | In your cluster | Git repo | Kubernetes CD done properly | CD only — you still need CI |
+
+:::key Choose on constraints, not preference
+Three questions settle it almost every time:
+
+1. **Where does your code live?** Being on GitHub or GitLab makes their CI the
+   default; the integration is most of the value.
+2. **Must you self-host?** Regulatory, air-gapped, or data-residency reasons
+   point to Jenkins, GitLab self-managed, or Tekton.
+3. **Are you deploying to Kubernetes?** Then the CD half should probably be
+   **pull-based** — Argo CD or Flux — regardless of which CI you picked.
+
+The common, boring, correct answer for a new project on GitHub deploying to
+Kubernetes is: **Actions for CI, Argo CD for CD.** Do not run CI you could rent
+without a reason you can state.
+:::
+
+:::ar منظر الأدوات — إيه الفرق بينهم؟
+**كل الأدوات دي بتعمل نفس الشكل**: زناد ← مراحل ← artifact ← نشر.
+
+**والفرق بينهم في حاجتين بس:**
+
+1. **مين بيشغّلهم** (إنت ولا شركة)
+2. **الديبلوي رايح في أي اتجاه** (دفع ولا سحب)
+
+| الأداة | مين بيستضيفها | قوّتها | خد بالك من |
+|:---|:---|:---|:---|
+| **GitHub Actions** | GitHub | إنت أصلاً على GitHub | **actions الغير خطر سلسلة توريد** — ثبّتها على SHA |
+| **GitLab CI** | GitLab أو إنت | تكامل عميق | بتربطك بـ GitLab |
+| **[Jenkins](jenkins.md)** | **إنت** | لما تكون **مضطر** تستضيف | **إنت بتشغّله** — plugins وديسك وثغرات |
+| **CircleCI / Buildkite** | هما | سريعة وكاش كويس | التكلفة بالدقيقة |
+| **Tekton** | إنت، على كوبرنيتيس | CI **كأوبجكتس كوبرنيتيس** | منخفض المستوى |
+| **[Argo CD](gitops.md) / Flux** | **جوه كلاسترك** | **نشر كوبرنيتيس صح** | **نشر بس** — لسه محتاج CI |
+
+:::key والاختيار على أساس **القيود**، مش التفضيل
+**تلات أسئلة بيحسموا الموضوع في أغلب الحالات:**
+
+**١. كودك فين؟** لو على GitHub أو GitLab، الـ CI بتاعتهم هي الافتراضي —
+**والتكامل هو أغلب الفايدة**.
+
+**٢. هل إنت مضطر تستضيف بنفسك؟** (رقابة، شبكة مقفولة، قيود على مكان
+الداتا) ← Jenkins أو GitLab ذاتي أو Tekton.
+
+**٣. بتنشر على كوبرنيتيس؟** يبقى **نص الـ CD المفروض يبقى سحب (pull)**
+— Argo CD أو Flux — **بغض النظر عن الـ CI اللي اخترتها**.
+
+**والإجابة الشائعة والمملّة والصحيحة** لمشروع جديد على GitHub بينشر على
+كوبرنيتيس: **Actions للـ CI، و Argo CD للـ CD.**
+
+**ومتشغّلش CI تقدر تستأجرها من غير سبب تقدر تقوله.**
+:::
 :::
 
 ## How to use it — a real GitHub Actions pipeline
@@ -271,7 +351,7 @@ worse than having no pipeline.
 The same applies to any deploy tool: **always wait for and verify the result.**
 :::
 
-:::ar بالمصري · بايبلاين بتقول «نجح» والبرودكشن واقع
+:::ar بايبلاين بتقول «نجح» والبرودكشن واقع
 دي أخطر حاجة في الصفحة، عشان **البايبلاين اللي بتكدب أسوأ من إنك ملكش
 بايبلاين خالص**.
 
@@ -370,7 +450,7 @@ This constraint is not obvious until it causes an outage during an ordinary
 deploy.
 :::
 
-:::ar بالمصري · الـ rolling update معناها **نُسختين شغالين مع بعض**
+:::ar الـ rolling update معناها **نُسختين شغالين مع بعض**
 دي نقطة كل الناس بتنساها، ولحد ما توقّع الموقع في ديبلوي عادي جداً.
 
 ```diagram
@@ -689,8 +769,6 @@ question, not answered it.
 :::
 :::
 
-## Key takeaways
-
 ## Common problems
 
 | Symptom | Cause | Fix |
@@ -715,7 +793,7 @@ question, not answered it.
 - **Rollback must be one command**, and you must have practised it.
 - **Untrusted code and production credentials never share a job.**
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **CI = هو شغّال؟ CD = ينفع ينزل؟** مشكلتين مختلفتين، ومتخلطهمش.
 2. **ابني مرة واحدة ورقّي نفس الـ artifact.** البناء لكل بيئة **بيلغي
    قيمة اختبارك كله**.

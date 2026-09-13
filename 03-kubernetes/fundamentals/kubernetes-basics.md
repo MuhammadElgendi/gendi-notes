@@ -87,7 +87,7 @@ makes a new one. To actually remove it you change the *desired state* (delete
 the Deployment). Grasp this and Kubernetes stops feeling arbitrary.
 :::
 
-:::ar بالمصري · الفكرة الوحيدة اللي لو فهمتها فهمت كل حاجة
+:::ar الفكرة الوحيدة اللي لو فهمتها فهمت كل حاجة
 الفكرة دي اسمها **reconciliation** — يعني «التوفيق» أو «إصلاح الفرق».
 
 **إنت عمرك ما بتقول لكوبرنيتيس «اعمل حاجة».** إنت بتقوله «الدنيا لازم
@@ -171,7 +171,7 @@ A cluster has two halves.
 | **kube-proxy** | Sets up networking so Services work |
 | **Container runtime** | Actually runs containers (containerd) |
 
-:::ar بالمصري · الكلاستر نصين، والنصين ليهم أدوار مختلفة
+:::ar الكلاستر نصين، والنصين ليهم أدوار مختلفة
 تخيل شركة:
 
 - **الـ Control Plane = الإدارة.** بتقرر مين يشتغل فين، وبتسجّل كل حاجة،
@@ -243,7 +243,7 @@ You describe everything in YAML. These are the ones you actually need:
 You almost never create a Pod directly. You create a **Deployment**, and it
 creates the Pods.
 
-:::ar بالمصري · الأوبجكتس اللي هتستخدمها فعلاً
+:::ar الأوبجكتس اللي هتستخدمها فعلاً
 كوبرنيتيس فيه حوالي ٥٠ نوع أوبجكت. إنت محتاج **٧** منهم في الشغل اليومي:
 
 | الأوبجكت | يعني إيه | تخيلها زي |
@@ -383,7 +383,7 @@ kubectl rollout status deploy/web    # wait for the rollout to finish
 `kubectl apply` is **declarative** — run it repeatedly and you converge on the
 file's contents. `kubectl create` fails if the object exists. Always use `apply`.
 
-:::ar بالمصري · اقرأ الـ YAML ده بالراحة، سطر بسطر
+:::ar اقرأ الـ YAML ده بالراحة، سطر بسطر
 الـ YAML بيخوّف في الأول عشان شكله كتير. بس هو ٤ أسئلة بس:
 
 | السطر | بيجاوب على سؤال إيه |
@@ -453,7 +453,7 @@ kubectl get endpoints web
 before anything else.
 :::
 
-:::ar بالمصري · الـ labels هي اللي ماسكة كل حاجة
+:::ar الـ labels هي اللي ماسكة كل حاجة
 حاجة غريبة في كوبرنيتيس: **مفيش حاجة مربوطة بحاجة بالاسم.** كله بيلاقي كله
 بالـ **labels** — يعني استيكرز.
 
@@ -537,7 +537,7 @@ CPU usage graphs look **low**, because frozen time is not counted as usage.
 So "the app is slow but CPU looks fine" is often a CPU limit set too low.
 :::
 
-:::ar بالمصري · الرقمين دول أهم من أي حاجة تانية
+:::ar الرقمين دول أهم من أي حاجة تانية
 | | `requests` | `limits` |
 |:---|:---|:---|
 | معناها | الحد الأدنى **المضمون** ليك | السقف اللي **ممنوع** تعدّيه |
@@ -605,7 +605,7 @@ first to be evicted when a node runs short.
 | `OOMKilled` | Exceeded its memory limit | Raise the limit, or fix the leak |
 | `Running` but not working | Often a Service/label problem | `kubectl get endpoints` |
 
-:::ar بالمصري · جدول تشخيص سريع
+:::ar جدول تشخيص سريع
 اقرأ حالة البود، وامشي على السهم:
 
 ```diagram
@@ -875,7 +875,7 @@ probe، كوبرنيتيس بيعتبره جاهز **في نفس اللحظة** 
 - **`Running` is not `Ready`.** Services route only to `Ready`, and a missing
   readiness probe is why deploys emit unexplained 502s.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **إنت بتوصف المطلوب، والكنترولرز بتخلي الواقع يطابقه.** دي كل الحكاية.
 2. **Deployment ← Pods ← Service.** إنت بتعمل Deployments، **مش** Pods.
 3. **الـ labels هي اللي رابطة كل حاجة.** `get endpoints` بتوري `<none>`؟

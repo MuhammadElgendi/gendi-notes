@@ -71,7 +71,7 @@ just scales the old ReplicaSet up and the new one down.
 many are kept.
 :::
 
-:::ar بالمصري · تلات طبقات، وفهمهم بيفسّر الـ rollback
+:::ar تلات طبقات، وفهمهم بيفسّر الـ rollback
 ```diagram
    Deployment      "شغّلي ٣ بودات nginx:1.27، وحدّثهم بأمان"
         │
@@ -207,7 +207,7 @@ If your app is simply slow to start, use a **startupProbe** — it suspends
 liveness until the app is up, instead of you having to loosen liveness forever.
 :::
 
-:::ar بالمصري · الـ probes دي أخطر حاجة في الملف كله
+:::ar الـ probes دي أخطر حاجة في الملف كله
 التلاتة شكلهم متشابه، وبيعملوا حاجات مختلفة تماماً. وغلطة هنا **بتوقّع
 الموقع بإيدك إنت**، مش بسبب عطل.
 
@@ -585,7 +585,7 @@ kubectl rollout restart deploy/web
 - Deploy-time 502s are the endpoint-propagation race — fix with a `preStop`
   sleep.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **Deployment ← ReplicaSet ← Pods.** ReplicaSet لكل إصدار، وعشان كده
    الـ rollback لحظي.
 2. **الـ readiness بتشيل من الترافيك، والـ liveness بتقتل وترجّع.**

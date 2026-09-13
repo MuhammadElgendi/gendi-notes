@@ -96,7 +96,7 @@ three exist at once. This is why external traffic still goes through the same
 in-cluster routing rules, and why the cloud LB's health checks matter.
 :::
 
-:::ar بالمصري · الـ Service حاجتين مخبّيين جوه أوبجكت واحد
+:::ar الـ Service حاجتين مخبّيين جوه أوبجكت واحد
 دي أهم فكرة في الصفحة، وهي سبب إن أغلب الناس بتظبّط الحاجة الغلط.
 
 الـ Service مش حاجة واحدة، هي **حاجتين** شغالين مع بعض:
@@ -300,7 +300,7 @@ Service is behaving correctly by refusing to send traffic there.
 There is no error message for either. Always check endpoints first.
 :::
 
-:::ar بالمصري · `<none>` دي أشهر مشكلة في كوبرنيتيس كله
+:::ar `<none>` دي أشهر مشكلة في كوبرنيتيس كله
 الـ Service موجودة، والـ DNS بيترجم، والكونيكشن بيتقبل... وكل حاجة بتقعد
 تستنى لحد ما الوقت يخلص. **عشان مفيش أي بود ورا الـ Service.**
 
@@ -352,7 +352,7 @@ perfectly healthy. Fixes are a maximum connection lifetime on the client, or an
 L7 proxy / service mesh that balances per request.
 :::
 
-:::ar بالمصري · عمّلت scale ومفيش حاجة اتغيرت
+:::ar عمّلت scale ومفيش حاجة اتغيرت
 دي مشكلة بتحصل في البرودكشن كتير، والناس تقعد ساعات مش فاهمة.
 
 **كوبرنيتيس بيوزّع الـ connections، مش الـ requests.**
@@ -649,7 +649,7 @@ Ready — بدل عنوان واحد.
 - Load balancing is **per connection**. Keep-alive defeats it.
 - **Ingress** for HTTP from outside — and it needs a controller installed.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **الـ IPs بتتغير، والـ Service هي العنوان الثابت.**
 2. **`kubectl get endpoints <svc>` الأول، دايماً.** `<none>` معناها إما
    الـ selector غلط، وإما البودات مش `Ready`.

@@ -491,6 +491,21 @@ img, svg { max-width: 100%; height: auto; }
   letter-spacing: 0.05em; text-transform: uppercase;
   color: var(--text-muted);
 }
+/* A title may contain `code` — it names flags and commands. Strip the usual
+   code chrome down so it reads as part of the label rather than a box inside
+   a box, and stop the uppercase transform mangling the identifier. */
+.callout-label code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  color: inherit;
+}
+.callout-label strong { font-weight: 800; color: inherit; }
+
 .callout-body { min-width: 0; }
 .callout-body > :last-child { margin-bottom: 0; }
 .callout-body > :first-child { margin-top: 0; }

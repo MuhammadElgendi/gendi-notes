@@ -142,7 +142,7 @@ untouched. Anything a container writes is lost when it is removed, unless it
 was written to a volume.
 :::
 
-:::ar بالمصري · يعني إيه كل واحدة
+:::ar يعني إيه كل واحدة
 خمس كلمات، وكل واحدة إنت بتلمسها في وقت مختلف. خلينا نمشي عليهم:
 
 | الكلمة | يعني إيه | تخيلها زي |
@@ -301,7 +301,7 @@ dependency. This one ordering decision is often the difference between a
 5-second and a 3-minute build.
 :::
 
-:::ar بالمصري · الكاش ده أهم سطر في الملف
+:::ar الكاش ده أهم سطر في الملف
 دوكر بيبني الـ image **طبقة طبقة**، وكل سطر في الـ Dockerfile بيطلع طبقة.
 
 الحكاية إن دوكر بيقول لنفسه: «السطر ده، مدخلاته اتغيرت؟ لو لأ، مش هعيد
@@ -483,7 +483,7 @@ is why Linux containers on Windows or macOS run inside a hidden Linux VM. And
 because the kernel is shared, containers are a good isolation boundary but a
 weaker security boundary than a VM.
 
-:::ar بالمصري · الكونتينر مش صندوق سحري
+:::ar الكونتينر مش صندوق سحري
 دي أهم فكرة في الصفحة كلها، ولو فهمتها هتفهم كل حاجة بعدها.
 
 **الكونتينر مش ماكينة صغيرة. الكونتينر عملية لينكس عادية خالص**، بس اتعمللها
@@ -522,7 +522,7 @@ weaker security boundary than a VM.
 | Image is enormous (1GB+) | Build tools left in the final image | Use a multi-stage build and an `alpine` or `slim` base |
 | Disk full | Old images and build cache accumulate | `docker system prune -a` |
 
-:::ar بالمصري · خد الترتيب ده وإنت بتظبّط أي مشكلة
+:::ar خد الترتيب ده وإنت بتظبّط أي مشكلة
 مش مهم المشكلة إيه، امشي على الترتيب ده بالظبط ومتقلبهوش:
 
 ```diagram
@@ -855,7 +855,7 @@ Kaniko، أو Buildah. أو يكون فيه سيرفيس مخصوص للبناء
 - **Use the array form of `CMD`/`ENTRYPOINT`.** The shell form makes `sh` PID 1,
   which swallows `SIGTERM` and turns every stop into a 10-second kill.
 
-:::ar بالمصري · الخلاصة في ٨ نقط
+:::ar الخلاصة في ٨ نقط
 لو مش فاضي تقرأ الصفحة كلها تاني بعد ٦ شهور، اقرأ دي:
 
 1. **Dockerfile → Image → Container.** روشتة، صورة مجمّدة، عملية شغالة.

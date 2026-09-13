@@ -27,7 +27,7 @@ the beginning, in the language you think in.
 |:---|:---|
 | Image | The built, read-only result |
 
-:::ar بالمصري · يعني إيه كل واحدة
+:::ar يعني إيه كل واحدة
 الـ **Image** ملف نايم على الديسك — مجمّد ومش بيتغير.
 والـ **Container** هو لما تشغّل الملف ده ويبقى عملية حية.
 :::
@@ -68,7 +68,9 @@ Hosting it permanently on your own server — domain, HTTPS, password,
 | A learning path, in order | [ROADMAP.md](ROADMAP.md) |
 | Look up a term | [GLOSSARY.md](GLOSSARY.md) |
 | Add a note | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| **Get a note live** | [PUBLISHING.md](PUBLISHING.md) |
 | How these notes are written | [PRINCIPLES.md](PRINCIPLES.md) |
+| Build the server from scratch | [deploy/README.md](deploy/README.md) |
 
 **If you are new,** read in this order:
 

@@ -27,7 +27,7 @@ but you end up memorising commands — and every debugging session eventually
 bottoms out in Linux and networking concepts you skipped.
 
 **How to read a note.** Each section is written twice: once in English, once in
-Egyptian Arabic (`بالمصري`). Read the English first — the terms are the ones you
+Egyptian Arabic. Read the English first — the terms are the ones you
 will meet in the documentation — then the Arabic, which explains the same idea
 from the beginning and usually answers the "…but what does that *mean*?" the
 English left implicit. Then work the **Interview corner** at the end as a quiz
@@ -72,7 +72,9 @@ a container is not a small VM.
 
 | | Note | Level |
 |:--|:---|:---|
-| ✅ | [CI/CD](01-devops/ci-cd/ci-cd.md) | L2 |
+| ✅ | [CI/CD](01-devops/ci-cd/ci-cd.md) — including the tool landscape | L2 |
+| ✅ | [Jenkins](01-devops/ci-cd/jenkins.md) | L2 |
+| ✅ | [GitOps](01-devops/ci-cd/gitops.md) | L3 |
 | ○ | GitHub Actions in depth | L2 |
 | ○ | Artifact management and versioning | L2 |
 
@@ -100,11 +102,15 @@ becomes expensive.
 | ✅ | [Kubernetes Services](03-kubernetes/services/kubernetes-services.md) | L2 |
 | ✅ | [Kubernetes Troubleshooting](03-kubernetes/troubleshooting/kubernetes-troubleshooting.md) | L2 |
 | ✅ | [kubectl Cheat Sheet](14-cheat-sheets/kubernetes/kubectl-commands.md) | L1 |
-| ○ | ConfigMaps and Secrets | L2 |
-| ○ | Ingress and TLS | L2 |
-| ○ | Storage: PV, PVC, StorageClass | L3 |
-| ○ | RBAC | L3 |
-| ○ | Autoscaling: HPA, VPA, Cluster Autoscaler | L3 |
+| ✅ | [Kubernetes Architecture](03-kubernetes/architecture/kubernetes-architecture.md) — what happens on `kubectl apply` | L3 |
+| ✅ | [ConfigMaps and Secrets](03-kubernetes/configmaps/configmaps-and-secrets.md) | L2 |
+| ✅ | [Ingress and TLS](03-kubernetes/ingress/ingress.md) | L2 |
+| ✅ | [Kubernetes Storage](03-kubernetes/storage/kubernetes-storage.md) | L3 |
+| ✅ | [StatefulSets, DaemonSets and Jobs](03-kubernetes/statefulsets/kubernetes-workloads.md) | L3 |
+| ✅ | [Kubernetes RBAC](03-kubernetes/rbac/kubernetes-rbac.md) | L3 |
+| ✅ | [Autoscaling and Scheduling](03-kubernetes/autoscaling/autoscaling-and-scheduling.md) | L3 |
+| ✅ | [Helm](03-kubernetes/helm/helm.md) | L2 |
+| ✅ | [Building a Cluster with kops](03-kubernetes/cluster-maintenance/kops-cluster-setup.md) | L3 |
 | ○ | Cluster upgrades | L4 |
 
 **Move on when** you can trace a request from the internet to a container and
@@ -131,8 +137,8 @@ failure you care about.
 |:--|:---|:---|
 | ✅ | [Prometheus](08-observability/prometheus/prometheus.md) — including PromQL and cardinality | L2 |
 | ✅ | [SLOs and Error Budgets](07-sre/error-budgets/slo-and-error-budgets.md) | L3 |
-| ○ | Metrics, logs and traces: what each is for | L2 |
-| ○ | Grafana dashboards | L2 |
+| ✅ | [Observability Fundamentals](08-observability/metrics/observability-fundamentals.md) — the three pillars and the tool landscape | L2 |
+| ✅ | [Grafana](08-observability/grafana/grafana.md) | L2 |
 | ○ | Alerting that does not page you for nothing | L3 |
 | ○ | Incident response | L3 |
 | ○ | Postmortems | L3 |

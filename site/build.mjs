@@ -29,7 +29,7 @@ const CHECK_ONLY = ARGV.has("--check");
 const QUIET = ARGV.has("--quiet");
 
 const ROOT_DOCS = ["README.md", "INDEX.md", "ROADMAP.md", "GLOSSARY.md",
-                   "PRINCIPLES.md", "CONTRIBUTING.md"];
+                   "PRINCIPLES.md", "CONTRIBUTING.md", "PUBLISHING.md"];
 const SKIP_DIRS = new Set(["site", "node_modules", ".git", ".github", "templates"]);
 
 const VALID_TYPES = ["concept", "guide", "architecture", "troubleshooting", "interview",
@@ -141,7 +141,7 @@ const CALLOUTS = {
      language the reader thinks in. Rendered RTL in an Arabic face; code,
      diagrams and command names inside it are forced back to LTR by the
      stylesheet. See .callout.is-ar in app.css. */
-  ar:     { cls: "is-ar",     icon: "\u{1F4AC}", label: "بالمصري" },
+  ar:     { cls: "is-ar",     icon: "\u{1F4AC}", label: "شرح" },
 };
 
 const slugify = s => s.toLowerCase().trim()
@@ -221,7 +221,12 @@ function renderBody(md, ctx, toc) {
       out.push(
         `<aside class="callout ${spec.cls}"${rtl}>` +
         `<span class="callout-icon" aria-hidden="true">${spec.icon}</span>` +
-        `<span class="callout-label">${escapeHtml(custom || spec.label)}</span>` +
+        /* A custom title runs through inline() so `code` and **bold** in it
+           render, instead of showing literal backticks and asterisks — titles
+           name flags and commands constantly (":::warn `chmod 777` is not a
+           fix"). The default label is a plain string and only needs escaping. */
+        `<span class="callout-label"${bidi(custom)}>` +
+        `${custom ? inline(custom, ctx) : escapeHtml(spec.label)}</span>` +
         `<div class="callout-body">${renderBody(read.body, ctx, null)}</div></aside>`
       );
       continue;

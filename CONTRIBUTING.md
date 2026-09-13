@@ -4,6 +4,10 @@ The system exists so you never make style decisions. Copy the template, fill it
 honestly, run the build. Navigation, indexing, styling and link checking are
 handled for you.
 
+This document is the **house style** — what goes in a note and how it is
+written. For the mechanical loop from new file to live site, including what to
+do when a deploy fails, see [PUBLISHING.md](PUBLISHING.md).
+
 ---
 
 ## The five-minute version
@@ -181,7 +185,7 @@ unreadable and a shell command is not prose.
 **A custom title is often worth it** — it becomes the block's one-line promise:
 
 ```markdown
-:::ar بالمصري · ليه بيتشاركوا localhost؟
+:::ar ليه بيتشاركوا localhost؟
 ```
 
 ### The rules that keep it useful

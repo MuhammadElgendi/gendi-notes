@@ -55,11 +55,11 @@ leak — and they always do — you land back here:
 Learning Kubernetes before Linux is possible, but you end up memorising
 commands instead of understanding what they do.
 
-:::ar بالمصري · ليه تبدأ من هنا بالتحديد
+:::ar ليه تبدأ من هنا بالتحديد
 كل طبقة فوق لينكس هي مجرد **تغليف** ليه. والتغليف ده بيتشقّق، ودايماً
 بيتشقّق. ولما يتشقّق، إنت بترجع تقف هنا.
 
-بص على الجدول اللي فوق تاني، بس بالمصري:
+بص على الجدول اللي فوق تاني، بس بالعربي:
 
 | اللي بيقولوه | اللي إنت فعلاً بتظبّطه |
 |:---|:---|
@@ -102,7 +102,7 @@ commands instead of understanding what they do.
 | **systemd** | Starts and supervises long-running services |
 | **Package manager** | Installs software (`apt`, `dnf`, `apk`) |
 
-:::ar بالمصري · يعني إيه كل واحدة
+:::ar يعني إيه كل واحدة
 الرسمة اللي فوق بتقول حاجة واحدة: **إنت مش بتكلّم الهاردوير، إنت بتكلّم
 الكيرنل، والكيرنل هو اللي بيكلّم الهاردوير.**
 
@@ -217,7 +217,7 @@ that user access. `755` for directories and executables, `600` for anything
 secret.
 :::
 
-:::ar بالمصري · الأرقام دي جاية منين؟
+:::ar الأرقام دي جاية منين؟
 `-rw-r--r--` دي مش طلاسم. اقراها على أربع حاجات:
 
 ```diagram
@@ -285,7 +285,7 @@ Always try `kill` first. Reach for `-9` only when the process is genuinely
 stuck.
 :::
 
-:::ar بالمصري · الفرق بين `kill` و `kill -9` مهم أكتر مما تتخيل
+:::ar الفرق بين `kill` و `kill -9` مهم أكتر مما تتخيل
 اسم الأمر مضلّل. `kill` **مش** معناها اقتل.
 
 ```diagram
@@ -422,7 +422,7 @@ script that works for you can fail under `sudo` with "command not found", and
 Use `sudo -i` for an interactive root shell, or give commands their full path.
 :::
 
-:::ar بالمصري · الحاجتين دول بيوقّعوا كل الناس
+:::ar الحاجتين دول بيوقّعوا كل الناس
 **١. «مفيش مساحة» والمساحة فاضية**
 
 `df -h` بيقولك ٤٠٪ مستخدم، ومع ذلك مش قادر تكتب أي ملف. إيه الحكاية؟
@@ -599,7 +599,7 @@ and opened the redirect **before** `sudo` ran — the elevation applies only to
 - **`df -h` for space, `df -i` for inodes.** "Full disk" with space free means
   inodes.
 
-:::ar بالمصري · الخلاصة
+:::ar الخلاصة
 1. **شجرة واحدة من `/`.** الإعدادات في `/etc`، اللوجز في `/var/log`، وحالة
    الكيرنل الحية في `/proc`.
 2. **`tail -f` و `grep`** هيعملولك أغلب قراءة اللوجز اللي هتعملها في حياتك.
