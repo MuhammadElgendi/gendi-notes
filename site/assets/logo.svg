@@ -1,0 +1,7 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Gendi Notes logo">
+  <rect x="20" y="46" width="250" height="250" rx="58" fill="#2F5EEB"/>
+  <path d="M190 100C164 84 136 75 109 75C71 75 39 107 39 145C39 183 71 215 109 215C130 215 150 208 165 195" stroke="#F5F7FF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M191 160H110" stroke="#F5F7FF" stroke-width="24" stroke-linecap="round"/>
+  <path d="M191 100C210 114 223 134 223 155C223 183 203 206 173 218" stroke="#F5F7FF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="350" y="212" fill="#D9DFED" font-size="146" font-weight="700" font-family="Inter, Segoe UI, Arial, sans-serif" letter-spacing="-6">Gendi Notes</text>
+</svg>

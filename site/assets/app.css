@@ -192,18 +192,35 @@ img, svg { max-width: 100%; height: auto; }
 @supports not (backdrop-filter: blur(1px)) { .header { background: var(--bg); } }
 
 .brand {
-  display: flex; align-items: center; gap: var(--s2);
-  font-weight: 650; font-size: var(--fs-md);
-  color: var(--text); letter-spacing: -0.01em;
+  display: flex; align-items: center;
   flex: 0 0 auto;
+  min-width: 0;
+  transition: transform 180ms ease;
 }
 .brand:hover { text-decoration: none; color: var(--text); }
-.brand-mark {
-  display: grid; place-items: center;
-  width: 26px; height: 26px; border-radius: var(--r-md);
-  background: var(--accent); color: #fff;
-  font-size: var(--fs-sm); font-weight: 700;
+.brand-logo {
+  display: block;
+  width: clamp(300px, 40vw, 780px);
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+  filter: none;
+  animation: brandFloat 4.5s ease-in-out infinite;
+  transform-origin: center;
 }
+
+@keyframes brandFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-2px); }
+}
+
+@media (max-width: 700px) {
+  .brand-logo {
+    width: clamp(220px, 56vw, 420px);
+    max-height: 90px;
+  }
+}
+
 
 .header-spacer { flex: 1 1 auto; }
 

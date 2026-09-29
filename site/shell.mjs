@@ -58,8 +58,8 @@ function header(up) {
 <header class="header">
   <label for="nav-toggle" class="icon-btn nav-toggle-label" aria-label="Toggle navigation"
          style="display:none">&#9776;</label>
-  <a class="brand" href="${up}index.html">
-    <span class="brand-mark" aria-hidden="true">G</span> Gendi Notes
+  <a class="brand" href="${up}index.html" aria-label="Gendi Notes home">
+    <img class="brand-logo" src="${up}assets/logo.svg" alt="Gendi Notes logo" />
   </a>
   <span class="header-spacer"></span>
   <div class="header-actions">

@@ -475,7 +475,7 @@ function build() {
 
   fs.rmSync(DIST, { recursive: true, force: true });
   fs.mkdirSync(path.join(DIST, "assets"), { recursive: true });
-  for (const f of ["app.css", "app.js", "boot.js"])
+  for (const f of ["app.css", "app.js", "boot.js", "logo.svg"])
     fs.copyFileSync(path.join(__dirname, "assets", f), path.join(DIST, "assets", f));
 
   notes.forEach(n => {
