@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>Publish a note · Gendi Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/app.css">
+<link rel="stylesheet" href="admin.css">
+<script src="../assets/boot.js"></script>
+<script type="module" src="admin.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="header">
+  <a class="brand" href="../index.html" aria-label="Gendi Notes home">
+    <img class="brand-logo" src="../assets/logo.svg" alt="Gendi Notes logo">
+  </a>
+  <span class="header-spacer"></span>
+  <div class="header-actions">
+    <a class="btn btn-ghost" id="site-link" href="../index.html">View site</a>
+    <button type="button" id="theme-toggle" class="icon-btn" aria-label="Toggle theme">&#9680;</button>
+  </div>
+</header>
+
+<main class="dash" id="main">
+  <div class="dash-hero">
+    <p class="dash-eyebrow">Dashboard</p>
+    <h1>Publish a note</h1>
+    <p>Drop a Markdown file, pick where it goes, publish. It is committed to GitHub,
+      linted, built and live in about a minute.</p>
+  </div>
+
+  <!-- ============================================================ CONNECT -->
+  <section class="dash-card" id="connect" hidden aria-labelledby="connect-title">
+    <h2 id="connect-title" class="dash-card-title">Connect to GitHub</h2>
+    <p class="dash-muted">The dashboard commits to <strong class="mono" data-repo-label>your repository</strong>
+      with a token only you hold. It is kept in this browser and sent only to <span class="mono">api.github.com</span>.</p>
+
+    <ol class="dash-howto">
+      <li>
+        <a class="btn btn-ghost" id="token-link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a token on GitHub ↗</a>
+        <p class="dash-hint">Permissions come prefilled (<b>Contents: Read and write</b>, <b>Actions: Read</b>).
+          Under <b>Repository access</b> choose <b>Only select repositories</b> → <b class="mono" data-repo-name>the notes repo</b>.</p>
+      </li>
+      <li>
+        <form id="connect-form" class="dash-connect" autocomplete="off">
+          <label class="dash-field">
+            <span>Paste the token</span>
+            <input type="password" id="token" placeholder="github_pat_…" spellcheck="false" required>
+          </label>
+          <label class="dash-check"><input type="checkbox" id="remember" checked> Remember on this browser</label>
+          <details class="dash-advanced">
+            <summary>Repository</summary>
+            <div class="dash-grid">
+              <label class="dash-field"><span>Owner / repo</span>
+                <input id="repo-input" placeholder="username/gendi-notes" spellcheck="false"></label>
+              <label class="dash-field"><span>Branch</span>
+                <input id="branch-input" placeholder="main" spellcheck="false"></label>
+            </div>
+          </details>
+          <div class="dash-actions">
+            <button type="submit" class="btn btn-primary" id="connect-btn">Connect</button>
+          </div>
+          <p class="dash-error" id="connect-error" role="alert" hidden></p>
+        </form>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ====================================================== CONNECTED BAR -->
+  <div class="dash-status" id="status-bar" hidden>
+    <span class="dash-dot is-ok" aria-hidden="true"></span>
+    <span class="dash-status-text">Connected as <b id="status-user"></b> · <a id="status-repo" class="mono" target="_blank" rel="noopener"></a>
+      <span class="dash-muted">(<span id="status-branch"></span>)</span></span>
+    <button type="button" class="dash-link" id="disconnect">Disconnect</button>
+  </div>
+
+  <!-- ============================================================ PUBLISH -->
+  <section class="dash-card" id="publish" hidden aria-labelledby="publish-title">
+    <h2 id="publish-title" class="sr-only">Note</h2>
+
+    <!-- 1. the file -->
+    <div class="dash-step">
+      <p class="dash-step-title"><span class="dash-num">1</span> Note file</p>
+
+      <div id="drop" class="dash-drop" tabindex="0" role="button" aria-describedby="drop-hint">
+        <input type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
+        <p class="dash-drop-main">Drop your <span class="mono">.md</span> file here, or <u>choose a file</u></p>
+        <p class="dash-hint" id="drop-hint">README.md is fine — the name is taken from the title inside it.</p>
+      </div>
+
+      <div id="file-chip" class="dash-file" hidden>
+        <span class="dash-file-icon" aria-hidden="true">MD</span>
+        <span class="dash-file-meta"><b id="file-name"></b><span class="dash-muted" id="file-info"></span></span>
+        <button type="button" class="dash-link" id="file-change">Change</button>
+      </div>
+
+      <p class="dash-or"><button type="button" class="dash-link" id="paste-toggle">Paste Markdown instead</button></p>
+      <label class="dash-field" id="paste-wrap" hidden>
+        <span class="sr-only">Markdown</span>
+        <textarea id="paste" rows="10" spellcheck="false" placeholder="# Title&#10;&#10;> One-line summary.&#10;&#10;## What is it?"></textarea>
+      </label>
+    </div>
+
+    <!-- 2. where it goes -->
+    <div class="dash-step">
+      <p class="dash-step-title"><span class="dash-num">2</span> Category</p>
+      <div class="dash-grid">
+        <label class="dash-field"><span>Section</span>
+          <select id="domain"></select></label>
+        <label class="dash-field"><span>Folder</span>
+          <select id="folder"></select></label>
+      </div>
+      <label class="dash-field" id="new-folder-wrap" hidden><span>New folder name</span>
+        <input id="new-folder" placeholder="e.g. argo-cd" spellcheck="false"></label>
+      <p class="dash-hint" id="folder-hint"></p>
+
+      <div class="dash-path" id="path-row" hidden>
+        <span class="mono" id="path"></span>
+        <span class="badge" id="path-badge"></span>
+      </div>
+    </div>
+
+    <!-- 3. details, prefilled -->
+    <details class="dash-step dash-details" id="details">
+      <summary class="dash-step-title"><span class="dash-num">3</span> Details <span class="dash-muted dash-small dash-sub">— filled in from the file, change anything</span></summary>
+      <div class="dash-grid">
+        <label class="dash-field dash-span"><span>Title</span><input id="title"></label>
+        <label class="dash-field"><span>Slug <span class="dash-muted">(filename and URL)</span></span>
+          <input id="slug" spellcheck="false"></label>
+        <label class="dash-field"><span>Tags <span class="dash-muted">(comma separated)</span></span>
+          <input id="tags" spellcheck="false"></label>
+        <label class="dash-field dash-span"><span>One-line summary <span class="dash-muted">(page subtitle and index entry)</span></span>
+          <input id="summary" dir="auto"></label>
+        <label class="dash-field"><span>Type</span><select id="type"></select></label>
+        <div class="dash-grid dash-grid-2">
+          <label class="dash-field"><span>Level</span>
+            <select id="level">
+              <option value="1">L1 · Beginner</option><option value="2">L2 · Practical</option>
+              <option value="3">L3 · Production</option><option value="4">L4 · Senior</option>
+              <option value="5">L5 · Staff</option>
+            </select></label>
+          <label class="dash-field"><span>Status</span><select id="status"></select></label>
+        </div>
+        <label class="dash-field dash-span"><span>Commit message</span><input id="message"></label>
+      </div>
+    </details>
+
+    <!-- checks + publish -->
+    <div class="dash-step">
+      <ul class="dash-checks" id="checks" aria-live="polite"></ul>
+      <details class="dash-preview" id="preview-wrap" hidden>
+        <summary>Show the file that will be committed</summary>
+        <pre id="preview"></pre>
+      </details>
+      <div class="dash-actions">
+        <button type="button" class="btn btn-primary btn-lg" id="publish-btn" disabled>Publish to site</button>
+        <span class="dash-muted dash-small" id="publish-why"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================== PROGRESS -->
+  <section class="dash-card" id="progress" hidden aria-labelledby="progress-title" aria-live="polite">
+    <h2 id="progress-title" class="dash-card-title">Publishing <span class="mono dash-small" id="progress-path"></span></h2>
+    <ol class="dash-steps" id="steps">
+      <li data-step="commit"><span class="dash-state"></span><span><b>Commit</b> to GitHub <a class="dash-step-link" hidden target="_blank" rel="noopener">view commit ↗</a></span></li>
+      <li data-step="lint"><span class="dash-state"></span><span><b>Lint</b> — links, frontmatter, ::: blocks</span></li>
+      <li data-step="build"><span class="dash-state"></span><span><b>Build</b> the site</span></li>
+      <li data-step="deploy"><span class="dash-state"></span><span><b>Deploy</b> to GitHub Pages <a class="dash-step-link" hidden target="_blank" rel="noopener">view run ↗</a></span></li>
+    </ol>
+    <div class="dash-result" id="result" hidden></div>
+    <div class="dash-actions">
+      <button type="button" class="btn btn-ghost" id="again" hidden>Publish another note</button>
+    </div>
+  </section>
+
+  <!-- ============================================================= RECENT -->
+  <section class="dash-card" id="recent" hidden aria-labelledby="recent-title">
+    <div class="dash-card-head">
+      <h2 id="recent-title" class="dash-card-title">Recent deploys</h2>
+      <button type="button" class="dash-link" id="recent-refresh">Refresh</button>
+    </div>
+    <ul class="dash-runs" id="runs"></ul>
+  </section>
+</main>
+
+<script src="../assets/app.js"></script>
+</body>
+</html>

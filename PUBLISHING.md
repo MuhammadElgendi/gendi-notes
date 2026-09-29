@@ -8,6 +8,19 @@ document again.
 
 ---
 
+## The fastest way: the dashboard
+
+With the site on GitHub Pages ([setup](deploy/GITHUB-PAGES.md)), open
+`https://<you>.github.io/gendi-notes/admin/`, drop the `.md` file, pick the
+section and folder, press **Publish to site**. It writes the frontmatter for
+you, runs the same checks as the linter below before it lets you publish, then
+shows the commit, lint, build and deploy until the note is live.
+
+Everything below still applies — it is what the dashboard does for you, and the
+way to publish from a terminal.
+
+---
+
 ## The short version
 
 ```bash
@@ -24,7 +37,8 @@ node site/serve.mjs                      # → http://localhost:8080
 git add -A && git commit -m "Add Grafana note"
 
 # 5. push. The push IS the deploy.
-git push production main
+git push github main          # GitHub Pages — pull --rebase first, see deploy/GITHUB-PAGES.md
+git push production main      # the VM
 ```
 
 A successful push prints the server's own output:

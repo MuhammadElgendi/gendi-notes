@@ -1,0 +1,113 @@
+# Gendi Notes — build and publish to GitHub Pages
+# ----------------------------------------------------------------------------
+# Runs on every push to main — from `git push` or from the dashboard at
+# <site>/admin/. Same order as deploy/post-receive on the VM:
+#
+#   1. lint   (node site/build.mjs --check)  ← a failure stops here and the
+#                                              live site keeps the old version
+#   2. build  (node site/build.mjs)
+#   3. add the publishing dashboard to the output (site/admin → /admin/)
+#   4. commit the regenerated INDEX.md back, so the repo copy never goes stale
+#   5. deploy site/dist to GitHub Pages
+#
+# One-time setup: Settings → Pages → Build and deployment → Source: GitHub Actions
+# ----------------------------------------------------------------------------
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write     # push the regenerated INDEX.md
+  pages: write        # deploy to Pages
+  id-token: write     # required by actions/deploy-pages
+
+# One deploy at a time. A newer push waits for the running one instead of
+# cancelling it half-way through a deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Lint notes
+        run: |
+          set -o pipefail
+          node site/build.mjs --check 2>&1 | tee "$RUNNER_TEMP/lint.txt"
+
+      - name: Explain lint failure
+        if: failure()
+        run: |
+          {
+            echo "## ✗ Lint failed — nothing was published"
+            echo
+            echo "The live site still serves the previous version. Fix the note and publish again."
+            echo
+            echo '```text'
+            cat "$RUNNER_TEMP/lint.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build site
+        run: node site/build.mjs --quiet
+
+      - name: Add publishing dashboard
+        run: |
+          mkdir -p site/dist/admin
+          cp -r site/admin/. site/dist/admin/
+          rm -f site/dist/admin/test.mjs site/dist/admin/config.json
+          # The dashboard reads which repo to commit to from here, so it works
+          # on <user>.github.io/<repo>/ and on a custom domain alike.
+          jq -n \
+            --arg owner  "${{ github.repository_owner }}" \
+            --arg repo   "${{ github.event.repository.name }}" \
+            --arg branch "${{ github.ref_name }}" \
+            '{owner: $owner, repo: $repo, branch: $branch, workflow: "pages.yml"}' \
+            > site/dist/admin/config.json
+
+      - name: Commit regenerated INDEX.md
+        # Never fail a deploy over this. If main moved on meanwhile, the next
+        # run regenerates and commits it anyway.
+        continue-on-error: true
+        run: |
+          if git diff --quiet -- INDEX.md; then
+            echo "INDEX.md unchanged"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Regenerate INDEX.md [skip ci]" -- INDEX.md
+          git push origin "HEAD:${{ github.ref_name }}" \
+            || echo "::warning::INDEX.md not pushed — main moved on; the next deploy will regenerate it."
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+      - name: Summary
+        run: |
+          echo "## ✓ Deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.deployment.outputs.page_url }}" >> "$GITHUB_STEP_SUMMARY"

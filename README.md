@@ -55,8 +55,12 @@ node site/build.mjs && node site/serve.mjs
 
 Open <http://localhost:8080>. No `npm install`, no dependencies, Node 18+.
 
-Hosting it permanently on your own server — domain, HTTPS, password,
-`git push` to deploy — is covered in [deploy/README.md](deploy/README.md).
+It is hosted on **GitHub Pages**, with a publishing dashboard at `/admin/`: drop
+a Markdown file, pick its section and folder, publish. Setup, and how it works,
+in [deploy/GITHUB-PAGES.md](deploy/GITHUB-PAGES.md).
+
+Hosting it on your own server instead — domain, HTTPS, password, `git push` to
+deploy — is covered in [deploy/README.md](deploy/README.md).
 
 ---
 
@@ -69,6 +73,7 @@ Hosting it permanently on your own server — domain, HTTPS, password,
 | Look up a term | [GLOSSARY.md](GLOSSARY.md) |
 | Add a note | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | **Get a note live** | [PUBLISHING.md](PUBLISHING.md) |
+| Publish from the browser (GitHub Pages dashboard) | [deploy/GITHUB-PAGES.md](deploy/GITHUB-PAGES.md) |
 | How these notes are written | [PRINCIPLES.md](PRINCIPLES.md) |
 | Build the server from scratch | [deploy/README.md](deploy/README.md) |
 
@@ -131,7 +136,9 @@ and the live site keeps serving the previous version.
 
 templates/               Note types. Always start from one
 site/                    Design system, renderer, linter
-deploy/                  Server setup and the git deploy hook
+site/admin/              The publishing dashboard (served at /admin/)
+deploy/                  Server setup, the git deploy hook, GitHub Pages
+.github/workflows/       GitHub Pages: lint → build → deploy on every push
 ```
 
 Directories with no notes yet are placeholders — the structure is deliberate, so
